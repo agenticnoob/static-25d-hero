@@ -1,0 +1,20 @@
+{
+  "name": "static-25d-hero",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A cinematic 2.5D / isometric landing hero page built with Vite + TypeScript + GSAP.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  },
+  "dependencies": {
+    "gsap": "^3.12.5"
+  }
+}

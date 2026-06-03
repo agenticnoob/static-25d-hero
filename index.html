@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0D0F12" />
+    <meta
+      name="description"
+      content="Spatial interfaces for agentic systems — a quiet control plane for observing, composing, and scaling AI workflows."
+    />
+    <title>Spatial — Agentic Infrastructure</title>
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <!--
+      Static 2.5D hero — single viewport, no other sections.
+
+      Visual layers (back → front):
+        1.  page background      warm near-black, static
+        2.  .ambient-a / .b      two very soft, low-contrast washes
+                                 for atmospheric depth (no neon)
+        3.  .pyramid             the single focal subject — a clear
+                                 2.5D stepped pyramid / ziggurat
+                                 (4 tiers + apex, each with top,
+                                 front and right-side face)
+        4.  .hero-copy           editorial title block, centered upper
+        5.  .brand / .meta       tiny typographic marks, corners
+
+      All 3D placement comes from CSS perspective + transform-style.
+      Pointer parallax is driven by two CSS variables (--mx, --my)
+      written once per rAF tick in main.ts. No per-element style writes.
+    -->
+    <main class="hero" id="hero" aria-label="Spatial interfaces for agentic systems">
+
+      <!-- Background ambient washes (low-saturation, soft, parallax subtle) -->
+      <div class="ambient ambient-a" aria-hidden="true"></div>
+      <div class="ambient ambient-b" aria-hidden="true"></div>
+
+      <!-- Top-left minimal mark -->
+      <header class="brand">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__name">Spatial</span>
+        <span class="brand__sep" aria-hidden="true"></span>
+        <span class="brand__version">v 0.9</span>
+      </header>
+
+      <!-- Top-right restrained meta (date / coordinates) -->
+      <div class="meta" aria-hidden="true">
+        <span class="meta__item">Q3 / 26</span>
+        <span class="meta__rule" aria-hidden="true"></span>
+        <span class="meta__item meta__item--muted">11° 04′ N · 04° 51′ E</span>
+      </div>
+
+      <!-- The single 2.5D focal subject — a stepped pyramid / ziggurat.
+           4 tiers + 1 apex, each with a top face, front face and right
+           side face. Light assumed to come from the upper-left. -->
+      <div class="stage" aria-hidden="true" data-depth="0.14" data-tilt="true">
+        <div class="pyramid">
+          <!-- Tier 1 — base. 560 × 180, 30px thickness. -->
+          <div class="tier tier-1">
+            <div class="face top"></div>
+            <div class="face front"></div>
+            <div class="face side"></div>
+          </div>
+
+          <!-- Tier 2 — 420 × 130, 24px thickness. -->
+          <div class="tier tier-2">
+            <div class="face top"></div>
+            <div class="face front"></div>
+            <div class="face side"></div>
+          </div>
+
+          <!-- Tier 3 — 300 × 95, 20px thickness. -->
+          <div class="tier tier-3">
+            <div class="face top"></div>
+            <div class="face front"></div>
+            <div class="face side"></div>
+          </div>
+
+          <!-- Tier 4 — 200 × 64, 16px thickness. -->
+          <div class="tier tier-4">
+            <div class="face top"></div>
+            <div class="face front"></div>
+            <div class="face side"></div>
+          </div>
+
+          <!-- Apex — 88 × 28, 10px thickness. -->
+          <div class="tier apex">
+            <div class="face top"></div>
+            <div class="face front"></div>
+            <div class="face side"></div>
+          </div>
+
+          <!-- Soft ground shadow under the pyramid base -->
+          <div class="pyramid__shadow"></div>
+        </div>
+      </div>
+
+      <!-- Editorial copy — centered, upper area -->
+      <section class="hero-copy">
+        <p class="eyebrow">
+          <span class="eyebrow__rule" aria-hidden="true"></span>
+          <span class="eyebrow__text">Agentic Infrastructure</span>
+        </p>
+        <h1 class="title">
+          Spatial interfaces<br />
+          <em>for agentic systems.</em>
+        </h1>
+        <p class="subtitle">
+          A quiet control plane for observing, composing,<br />
+          and scaling AI workflows.
+        </p>
+        <div class="cta-row">
+          <a class="cta" href="#">
+            <span class="cta__label">Enter preview</span>
+            <span class="cta__arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </section>
+
+    </main>
+
+    <noscript>
+      <p style="color:#E8E6DF;padding:1rem;text-align:center;font:14px/1.5 system-ui">
+        The visual is fully present without JavaScript; scripting only adds
+        pointer parallax and a quiet entrance.
+      </p>
+    </noscript>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

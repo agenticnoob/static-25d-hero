@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useMemo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useRef, useMemo, useImperativeHandle, forwardRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 /* ─────────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ const vertexShader = /* glsl */ `
 `;
 
 /* ─────────────────────────────────────────────────────────────────
-   Slab fragment shader — full quality
+   Slab fragment shader
    ───────────────────────────────────────────────────────────────── */
 
 const fragmentShader = /* glsl */ `
@@ -83,7 +83,7 @@ const fragmentShader = /* glsl */ `
 `;
 
 /* ─────────────────────────────────────────────────────────────────
-   Ground shaders
+   Ground plane shaders
    ───────────────────────────────────────────────────────────────── */
 
 const groundVert = /* glsl */ `
@@ -97,42 +97,58 @@ const groundFrag = /* glsl */ `
   precision highp float;
   uniform float uTime;
   varying vec2 vUv;
+
   void main() {
-    float alpha = smoothstep(1.0, 0.2, vUv.y) * 0.18;
-    vec3 col = vec3(0.06, 0.08, 0.12);
-    float scan = sin(vUv.y * 120.0 + uTime * 0.3) * 0.5 + 0.5;
-    col += scan * 0.008;
+    vec2 center = vec2(0.5, 1.0);
+    float dist = length(vUv - center);
+    float radialFade = 1.0 - smoothstep(0.0, 0.62, dist);
+    float depthFade = smoothstep(0.0, 0.35, vUv.y);
+    float alpha = radialFade * depthFade * 0.22;
+    vec3 col = vec3(0.055, 0.075, 0.11);
+    float scan = sin(vUv.y * 160.0 + uTime * 0.25) * 0.5 + 0.5;
+    col += scan * 0.006;
+    float vpDist = length(vUv - vec2(0.5, 1.0));
+    float vpGlow = exp(-vpDist * 7.0) * 0.18;
+    col += vec3(0.25, 0.45, 0.75) * vpGlow;
     gl_FragColor = vec4(col, alpha);
   }
 `;
 
 /* ─────────────────────────────────────────────────────────────────
-   Scene — time-driven uniforms update, mouse applied externally
+   Inner Scene — time uniforms + pointer tilt
    ───────────────────────────────────────────────────────────────── */
 
 const GROUND_UNIFORMS = { uTime: { value: 0 } };
+
+interface SceneRef {
+  slabMesh: THREE.Mesh | null;
+  slabMat: THREE.ShaderMaterial | null;
+}
 
 function Scene({
   slabUniforms,
   gndUniforms,
 }: {
   slabUniforms: { uTime: { value: number }; uMouse: { value: THREE.Vector2 } };
-  gndUniforms:  { uTime: { value: number } };
+  gndUniforms: { uTime: { value: number } };
 }) {
-  const gndRef = useRef<THREE.ShaderMaterial>(null);
+  const slabMeshRef = useRef<THREE.Mesh>(null);
+  const slabMatRef = useRef<THREE.ShaderMaterial>(null);
+  const { invalidate } = useThree();
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     slabUniforms.uTime.value = t;
     gndUniforms.uTime.value = t;
+    invalidate();
   });
 
   return (
     <>
-      {/* Slab — rotation/mouse applied imperatively via slabRef */}
-      <mesh>
+      <mesh ref={slabMeshRef}>
         <boxGeometry args={[4.2, 0.035, 2.6, 1, 1, 1]} />
         <shaderMaterial
+          ref={slabMatRef}
           vertexShader={vertexShader}
           fragmentShader={fragmentShader}
           uniforms={slabUniforms}
@@ -140,11 +156,9 @@ function Scene({
         />
       </mesh>
 
-      {/* Ground plane */}
-      <mesh position={[0, -0.9, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[12, 6]} />
+      <mesh position={[0, -1.4, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[16, 10]} />
         <shaderMaterial
-          ref={gndRef}
           vertexShader={groundVert}
           fragmentShader={groundFrag}
           uniforms={GROUND_UNIFORMS}
@@ -157,106 +171,131 @@ function Scene({
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   WebGLSlab — mouse tracking + invalidate driver
-   All mouse/rotation logic lives in DOM events on the outer div.
-   Three.js refs used imperatively — no React state, no re-renders.
+   WebGLSlab — pointer-driven tilt + time shader
+   Scroll-driven parallax (translateY + counter-rotate) applied by
+   Hero.tsx on the container div ref — keeps scroll logic in one place.
    ───────────────────────────────────────────────────────────────── */
 
-export default function WebGLSlab() {
-  const invalidateRef = useRef<() => void>(() => {});
-  const slabRef = useRef<THREE.Mesh>(null);
-  const slabMat = useRef<THREE.ShaderMaterial>(null);
-  const mouse    = useRef({ x: 0, y: 0 });
-  const target   = useRef({ x: 0, y: 0 });
+const WebGLSlab = forwardRef<HTMLDivElement, Record<string, never>>(
+  (_, fwdRef) => {
+    const invalidateRef = useRef<() => void>(() => {});
+    const containerRef = useRef<HTMLDivElement>(null);
+    const slabRef = useRef<THREE.Mesh>(null);
+    const slabMatRef = useRef<THREE.ShaderMaterial>(null);
+    const mouse = useRef({ x: 0, y: 0 });
+    const target = useRef({ x: 0, y: 0 });
 
-  const slabUniforms = useMemo(
-    () => ({
-      uTime:  { value: 0 },
-      uMouse: { value: new THREE.Vector2(0, 0) },
-    }),
-    []
-  );
+    const slabUniforms = useMemo(
+      () => ({
+        uTime: { value: 0 },
+        uMouse: { value: new THREE.Vector2(0, 0) },
+      }),
+      []
+    );
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    target.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    target.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    mouse.current.x += (target.current.x - mouse.current.x) * 0.055;
-    mouse.current.y += (target.current.y - mouse.current.y) * 0.055;
+    // Expose containerRef to parent
+    useImperativeHandle(fwdRef, () => containerRef.current!, []);
 
-    if (slabMat.current) {
-      slabMat.current.uniforms.uMouse.value.set(mouse.current.x, mouse.current.y);
-    }
-    if (slabRef.current) {
-      slabRef.current.rotation.x +=
-        (mouse.current.y * 0.12 - slabRef.current.rotation.x) * 0.055;
-      slabRef.current.rotation.y +=
-        (mouse.current.x * 0.18 - slabRef.current.rotation.y) * 0.055;
-    }
+    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      target.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      target.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-    invalidateRef.current();
-  };
+      const t = 0.055;
+      mouse.current.x += (target.current.x - mouse.current.x) * t;
+      mouse.current.y += (target.current.y - mouse.current.y) * t;
 
-  const handlePointerLeave = () => {
-    target.current.x = 0;
-    target.current.y = 0;
-    mouse.current.x += (0 - mouse.current.x) * 0.055;
-    mouse.current.y += (0 - mouse.current.y) * 0.055;
-    if (slabMat.current) {
-      slabMat.current.uniforms.uMouse.value.set(mouse.current.x, mouse.current.y);
-    }
-    if (slabRef.current) {
-      slabRef.current.rotation.x += (0 - slabRef.current.rotation.x) * 0.055;
-      slabRef.current.rotation.y += (0 - slabRef.current.rotation.y) * 0.055;
-    }
-    invalidateRef.current();
-  };
+      if (slabMatRef.current) {
+        slabMatRef.current.uniforms.uMouse.value.set(
+          mouse.current.x,
+          mouse.current.y
+        );
+      }
+      if (slabRef.current) {
+        slabRef.current.rotation.x +=
+          (mouse.current.y * 0.12 - slabRef.current.rotation.x) * t;
+        slabRef.current.rotation.y +=
+          (mouse.current.x * 0.18 - slabRef.current.rotation.y) * t;
+      }
 
-  return (
-    <div
-      style={{ position: "absolute", inset: 0, pointerEvents: "auto", zIndex: 5 }}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-    >
-      <Canvas
-        dpr={[1, 2]}
-        frameloop="demand"
-        camera={{ position: [0, 1.8, 5.2], fov: 42, near: 0.1, far: 100 }}
-        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-        style={{ background: "transparent" }}
-        onCreated={({ invalidate }) => {
-          invalidateRef.current = invalidate;
-          invalidate();
+      invalidateRef.current();
+    };
+
+    const handlePointerLeave = () => {
+      target.current.x = 0;
+      target.current.y = 0;
+      const t = 0.055;
+      mouse.current.x += (0 - mouse.current.x) * t;
+      mouse.current.y += (0 - mouse.current.y) * t;
+      if (slabMatRef.current) {
+        slabMatRef.current.uniforms.uMouse.value.set(mouse.current.x, mouse.current.y);
+      }
+      if (slabRef.current) {
+        slabRef.current.rotation.x += (0 - slabRef.current.rotation.x) * t;
+        slabRef.current.rotation.y += (0 - slabRef.current.rotation.y) * t;
+      }
+      invalidateRef.current();
+    };
+
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "auto",
+          zIndex: 5,
         }}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
       >
-        <ambientLight intensity={0.4} color="#1a2030" />
-        <directionalLight position={[3, 6, 4]} intensity={0.6} color="#c8d8f0" />
-        <pointLight position={[0, -2, 2]} intensity={0.08} color="#2040a0" />
+        <Canvas
+          dpr={[1, 2]}
+          frameloop="always"
+          camera={{ position: [0, 2.0, 5.2], fov: 42, near: 0.1, far: 100 }}
+          gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+          style={{ background: "transparent" }}
+          onCreated={({ invalidate: inv }) => {
+            invalidateRef.current = inv;
+          }}
+        >
+          <ambientLight intensity={0.4} color="#1a2030" />
+          <directionalLight position={[3, 6, 4]} intensity={0.6} color="#c8d8f0" />
+          <pointLight position={[0, -2, 2]} intensity={0.08} color="#2040a0" />
 
-        {/* Slab — imperative ref for rotation */}
-        <mesh ref={slabRef} position={[0, 0, 0]} rotation={[0.18, 0, 0]}>
-          <boxGeometry args={[4.2, 0.035, 2.6, 1, 1, 1]} />
-          <shaderMaterial
-            ref={slabMat}
-            vertexShader={vertexShader}
-            fragmentShader={fragmentShader}
-            uniforms={slabUniforms}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+          {/* Slab — imperative ref for pointer tilt */}
+          <mesh
+            ref={slabRef}
+            position={[0, 0, 0]}
+            rotation={[0.18, 0, 0]}
+          >
+            <boxGeometry args={[4.2, 0.035, 2.6, 1, 1, 1]} />
+            <shaderMaterial
+              ref={slabMatRef}
+              vertexShader={vertexShader}
+              fragmentShader={fragmentShader}
+              uniforms={slabUniforms}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
 
-        {/* Ground plane */}
-        <mesh position={[0, -0.9, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[12, 6]} />
-          <shaderMaterial
-            vertexShader={groundVert}
-            fragmentShader={groundFrag}
-            uniforms={GROUND_UNIFORMS}
-            transparent
-            depthWrite={false}
-          />
-        </mesh>
-      </Canvas>
-    </div>
-  );
-}
+          {/* Ground plane */}
+          <mesh position={[0, -1.4, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[16, 10]} />
+            <shaderMaterial
+              vertexShader={groundVert}
+              fragmentShader={groundFrag}
+              uniforms={GROUND_UNIFORMS}
+              transparent
+              depthWrite={false}
+            />
+          </mesh>
+        </Canvas>
+      </div>
+    );
+  }
+);
+
+WebGLSlab.displayName = "WebGLSlab";
+
+export default WebGLSlab;

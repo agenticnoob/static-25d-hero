@@ -2,6 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import WebGLSlab from "./WebGLSlab";
+import VoidField from "./VoidField";
+
+/* ─────────────────────────────────────────────────────────────────
+   Entrance animation — staggered fade + translate
+   ───────────────────────────────────────────────────────────────── */
 
 const ENTRANCE_ELEMENTS = [
   ".brand",
@@ -21,34 +26,58 @@ const ENTRANCE_DELAYS: Record<string, number> = {
   ".cta-row": 0.82,
 };
 
+/* ─────────────────────────────────────────────────────────────────
+   Parallax calibration — requestAnimationFrame + lerp
+   ─────────────────────────────────────────────────────────────────
+   Background   (depth-0): 0.8px / 0.6px  — low amplitude
+   WebGL slab   (depth-3): scroll-driven   — medium amplitude + counter-rotate
+   Title        (depth-4): -0.3px / -0.2px — extremely subtle counter
+   Eyebrow / Subtitle / CTA: ZERO parallax
+   ───────────────────────────────────────────────────────────────── */
+
+const BG_TX = 0.8;
+const BG_TY = 0.6;
+
+const TITLE_TX = -0.3;
+const TITLE_TY = -0.2;
+
+/* Scroll → slab position/rotation mapping */
+const SLAB_SCROLL_LERP = 0.06; // smooth arrival
+const SLAB_MAX_Y = 55;          // px — slab drops 55px over full viewport scroll
+const SLAB_COUNTER_ROTATE_X = 0.025; // rotateX counter-tilt on scroll
+const SLAB_COUNTER_ROTATE_Y = 0.015; // rotateY counter-tilt on scroll
+
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
 export default function Hero() {
-  // Refs for parallax layers
+  /* ── Refs ─────────────────────────────────────────────── */
   const bgRef = useRef<HTMLDivElement>(null);
-  const eyebrowRef = useRef<HTMLParagraphElement>(null);
-  const subtitleRef = useRef<HTMLParagraphElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const slabRef = useRef<HTMLDivElement>(null);   // DOM container of WebGLSlab
 
-  // Stable layer list
-  const layersRef = useRef<
-    Array<{ el: HTMLElement; tx: number; ty: number }>
-  >([]);
+  // Scroll state
+  const scrollYRef = useRef(0);
+  const scrollLerpedRef = useRef(0);
+
+  // Mouse parallax state (background + title)
   const mouseRef = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
+
+  // rAF handle
   const rafRef = useRef<number>(0);
 
-  // ── Entrance animation ────────────────────────────────────
+  /* ── Entrance animation ──────────────────────────────── */
   const hasRun = useRef(false);
   useEffect(() => {
     if (typeof window === "undefined" || hasRun.current) return;
     const prefersReduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
+    hasRun.current = true;
+
     if (prefersReduced) {
-      hasRun.current = true;
       ENTRANCE_ELEMENTS.forEach((selector) => {
         const el = document.querySelector(selector) as HTMLElement | null;
         if (!el) return;
@@ -57,7 +86,6 @@ export default function Hero() {
       });
       return;
     }
-    hasRun.current = true;
 
     ENTRANCE_ELEMENTS.forEach((selector) => {
       const el = document.querySelector(selector) as HTMLElement | null;
@@ -77,7 +105,7 @@ export default function Hero() {
     });
   }, []);
 
-  // ── Shared rAF parallax loop for all text layers + background ─
+  /* ── Unified rAF parallax loop ─────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const prefersReduced = window.matchMedia(
@@ -88,19 +116,11 @@ export default function Hero() {
     const clamp = (v: number, min: number, max: number) =>
       Math.max(min, Math.min(max, v));
 
+    /* Mouse tracking */
     const onMove = (e: PointerEvent) => {
-      mouseRef.current.x = clamp(
-        (e.clientX / window.innerWidth) * 2 - 1,
-        -1,
-        1
-      );
-      mouseRef.current.y = clamp(
-        (e.clientY / window.innerHeight) * 2 - 1,
-        -1,
-        1
-      );
+      mouseRef.current.x = clamp((e.clientX / window.innerWidth) * 2 - 1, -1, 1);
+      mouseRef.current.y = clamp((e.clientY / window.innerHeight) * 2 - 1, -1, 1);
     };
-
     const onLeave = () => {
       mouseRef.current.x = 0;
       mouseRef.current.y = 0;
@@ -110,19 +130,52 @@ export default function Hero() {
     window.addEventListener("pointerleave", onLeave);
     window.addEventListener("blur", onLeave);
 
-    const t = 0.055; // Global lerp damping
+    /* Scroll tracking */
+    const onScroll = () => {
+      scrollYRef.current = window.scrollY;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
 
+    /* RAF loop — all parallax driven here, one place */
     const tick = () => {
+      /* Mouse lerp */
+      const t = 0.055;
       currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
       currentRef.current.y = lerp(currentRef.current.y, mouseRef.current.y, t);
-
       const mx = currentRef.current.x;
       const my = currentRef.current.y;
 
-      // Update all registered layers imperatively
-      layersRef.current.forEach((layer) => {
-        layer.el.style.transform = `translate3d(${mx * layer.tx}px, ${my * layer.ty}px, 0)`;
-      });
+      /* Scroll lerp */
+      scrollLerpedRef.current = lerp(
+        scrollLerpedRef.current,
+        scrollYRef.current,
+        SLAB_SCROLL_LERP
+      );
+      const sy = scrollLerpedRef.current;
+
+      /* Background parallax */
+      if (bgRef.current) {
+        bgRef.current.style.transform = `translate3d(${mx * BG_TX}px, ${my * BG_TY}px, 0)`;
+      }
+
+      /* Title extremely subtle counter-parallax */
+      if (titleRef.current) {
+        titleRef.current.style.transform = `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
+      }
+
+      /* WebGL slab — scroll-driven Y + counter-rotate
+         Applied via the container ref; pointer tilt lives inside WebGLSlab */
+      if (slabRef.current) {
+        /* Normalized scroll: 0 at top, 1 at one viewport scroll */
+        const norm = sy / Math.max(window.innerHeight, 1);
+        const slabY = norm * SLAB_MAX_Y;
+        /* Counter-rotateX: slab tilts backward as user scrolls down */
+        const rotX = -norm * SLAB_COUNTER_ROTATE_X;
+        /* Counter-rotateY: slight yaw opposite to mouse x */
+        const rotY = mx * 0.008 - norm * SLAB_COUNTER_ROTATE_Y;
+
+        slabRef.current.style.transform = `translate3d(0px, ${slabY}px, 0px) rotateX(${rotX}rad) rotateY(${rotY}rad)`;
+      }
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -134,34 +187,7 @@ export default function Hero() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("blur", onLeave);
-    };
-  }, []);
-
-  // ── Register layers after mount ────────────────────────────
-  useEffect(() => {
-    const layers: typeof layersRef.current = [];
-
-    if (bgRef.current) {
-      // Background: moderate amplitude (2px at peak)
-      layers.push({ el: bgRef.current, tx: 2.0, ty: 1.5 });
-    }
-    if (eyebrowRef.current) {
-      // Eyebrow: subtle counter-movement (-0.8px peak)
-      layers.push({ el: eyebrowRef.current, tx: -0.8, ty: -0.5 });
-    }
-    if (subtitleRef.current) {
-      // Subtitle: same direction as eyebrow
-      layers.push({ el: subtitleRef.current, tx: -0.8, ty: -0.5 });
-    }
-    if (titleRef.current) {
-      // Title: slight counter-movement (-1.2px peak)
-      layers.push({ el: titleRef.current, tx: -1.2, ty: -0.8 });
-    }
-
-    layersRef.current = layers;
-
-    return () => {
-      layersRef.current = [];
+      window.removeEventListener("scroll", onScroll);
     };
   }, []);
 
@@ -169,24 +195,45 @@ export default function Hero() {
     <main
       id="hero"
       aria-label="Spatial interfaces for agentic systems"
-      className="fixed inset-0 overflow-hidden"
+      className="relative min-h-[100dvh] overflow-hidden"
       style={{
         perspective: "1600px",
-        perspectiveOrigin: "50% 42%",
+        perspectiveOrigin: "50% 36%",
         isolation: "isolate",
       }}
     >
-      {/* ── Deep space background ─────────────────────────── */}
+      {/* ── Deep space background ──────────────────────── */}
       <div
         ref={bgRef}
         className="absolute inset-0 pointer-events-none z-0"
-        style={{ background: "radial-gradient(ellipse 80% 60% at 50% 40%, #0F1219 0%, #080A10 100%)" }}
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% 40%, #0F1219 0%, #080A10 100%)",
+        }}
       />
 
-      {/* ── Subtle depth grid ────────────────────────────── */}
+      {/* ── Subtle depth grid ──────────────────────────── */}
       <div className="absolute inset-0 pointer-events-none z-0 grid-overlay" />
 
-      {/* ── Brand (top-left) — fixed, NO parallax ───────── */}
+      {/* ── Atmospheric radial glow ────────────────────── */}
+      <div
+        className="absolute pointer-events-none z-[4]"
+        style={{
+          top: "0",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "70vw",
+          height: "80vh",
+          background:
+            "radial-gradient(ellipse 50% 40% at 50% 48%, rgba(40, 100, 180, 0.07) 0%, transparent 70%)",
+        }}
+        aria-hidden="true"
+      />
+
+      {/* ── Void particle field ─────────────────────────── */}
+      <VoidField />
+
+      {/* ── Brand (top-left) — fixed, zero parallax ───── */}
       <header
         className="brand absolute z-10 select-none"
         style={{
@@ -223,7 +270,7 @@ export default function Hero() {
         </span>
       </header>
 
-      {/* ── Meta (top-right) — fixed, NO parallax ───────── */}
+      {/* ── Meta (top-right) — fixed, zero parallax ────── */}
       <div
         className="meta absolute z-10 select-none"
         aria-hidden="true"
@@ -253,23 +300,25 @@ export default function Hero() {
         <span>11° 04′ N</span>
       </div>
 
-      {/* ── WebGL architectural slab ─────────────────────── */}
-      <WebGLSlab />
+      {/* ── WebGL architectural slab — scroll parallax + pointer tilt */}
+      {/* z-index 5, behind copy (z-20) */}
+      <div ref={slabRef} className="absolute inset-0 z-[5]">
+        <WebGLSlab />
+      </div>
 
-      {/* ── Editorial copy ──────────────────────────────── */}
+      {/* ── Editorial copy — NO parallax on any text layer ─── */}
       <section
         className="hero-copy absolute left-1/2 z-20 text-center"
         style={{
-          top: "12vh",
+          top: "15vh",
           transform: "translateX(-50%)",
           maxWidth: "640px",
           width: "100%",
           padding: "0 40px",
         }}
       >
-        {/* Eyebrow */}
+        {/* Eyebrow — ZERO parallax */}
         <p
-          ref={eyebrowRef}
           className="eyebrow mb-6 inline-flex items-center"
           style={{
             gap: "16px",
@@ -294,7 +343,7 @@ export default function Hero() {
           <span>Agentic Infrastructure</span>
         </p>
 
-        {/* Title */}
+        {/* Title — extremely subtle counter-parallax */}
         <h1
           ref={titleRef}
           className="title mb-5"
@@ -313,9 +362,8 @@ export default function Hero() {
           <em>for agentic systems.</em>
         </h1>
 
-        {/* Subtitle */}
+        {/* Subtitle — ZERO parallax */}
         <p
-          ref={subtitleRef}
           className="subtitle mb-8"
           style={{
             fontSize: "15px",
@@ -332,58 +380,21 @@ export default function Hero() {
           and scaling AI workflows.
         </p>
 
-        {/* CTA — NO parallax, only hover micro-interaction */}
+        {/* CTA — pure CSS hover/active, ZERO parallax */}
         <div className="cta-row">
           <a
             href="#"
-            className="inline-flex items-center gap-3"
-            style={{
-              padding: "13px 22px 13px 24px",
-              border: "1px solid rgba(237, 233, 227, 0.18)",
-              fontSize: "10.5px",
-              letterSpacing: "0.24em",
-              textTransform: "uppercase",
-              color: "rgba(237, 233, 227, 0.65)",
-              fontFamily: "Georgia, serif",
-              textDecoration: "none",
-              transition:
-                "color 0.35s cubic-bezier(0.28, 0.72, 0.18, 1), border-color 0.35s cubic-bezier(0.28, 0.72, 0.18, 1)",
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = "#EDE9E3";
-              el.style.borderColor = "rgba(237, 233, 227, 0.45)";
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.color = "rgba(237, 233, 227, 0.65)";
-              el.style.borderColor = "rgba(237, 233, 227, 0.18)";
-            }}
+            className="cta-link group inline-flex items-center gap-3"
           >
-            <span>Enter preview</span>
-            <span
-              aria-hidden="true"
-              style={{
-                transition: "transform 0.35s cubic-bezier(0.28, 0.72, 0.18, 1)",
-                display: "inline-block",
-              }}
-              onMouseEnter={(e) => {
-                (
-                  e.currentTarget as HTMLElement
-                ).style.transform = "translateX(4px)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform =
-                  "translateX(0)";
-              }}
-            >
+            <span className="cta-label">Enter preview</span>
+            <span className="cta-arrow" aria-hidden="true">
               →
             </span>
           </a>
         </div>
       </section>
 
-      {/* ── Noscript fallback ───────────────────────────── */}
+      {/* ── Noscript fallback ──────────────────────────── */}
       <noscript>
         <p
           style={{

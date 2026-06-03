@@ -19,7 +19,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#05060A" />
         <link rel="icon" href="data:," />
       </head>
-      <body className="bg-[#05060A] text-[#EDE9E3] antialiased overflow-hidden overscroll-none touch-manipulation">
+      <body className="bg-[#05060A] text-[#EDE9E3] antialiased overscroll-none touch-manipulation">
         {children}
       </body>
     </html>

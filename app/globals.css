@@ -71,13 +71,48 @@
   transform-style: preserve-3d;
 }
 
-/* ── Reduced motion ────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
+/* ── CTA — pure CSS hover/active ──────────────────────────── */
+.cta-link {
+  padding: 13px 22px 13px 24px;
+  border: 1px solid rgba(237, 233, 227, 0.18);
+  font-size: 10.5px;
+  font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(237, 233, 227, 0.75); /* WCAG AA 4.66:1 on #05060A */
+  text-decoration: none;
+  transition:
+    color 0.35s cubic-bezier(0.28, 0.72, 0.18, 1),
+    border-color 0.35s cubic-bezier(0.28, 0.72, 0.18, 1),
+    background-color 0.35s cubic-bezier(0.28, 0.72, 0.18, 1),
+    transform 0.18s cubic-bezier(0.28, 0.72, 0.18, 1),
+    box-shadow 0.35s cubic-bezier(0.28, 0.72, 0.18, 1);
+}
+
+.cta-link:hover {
+  color: #EDE9E3;
+  border-color: rgba(237, 233, 227, 0.42);
+  background-color: rgba(237, 233, 227, 0.04);
+  box-shadow: 0 0 20px rgba(237, 233, 227, 0.08);
+}
+
+.cta-link:active {
+  transform: translateY(1px);
+  color: rgba(237, 233, 227, 0.9);
+}
+
+.cta-arrow {
+  display: inline-block;
+  transition: transform 0.35s cubic-bezier(0.28, 0.72, 0.18, 1);
+}
+
+.cta-link:hover .cta-arrow {
+  transform: translateX(4px);
+}
+
+/* ── Eyebrow — descender clearance for italic Georgia ─────── */
+.eyebrow {
+  line-height: 1.6;
+  /* leading-[1.1] min + pb reserve for italic descenders (y g j p q) */
+  padding-bottom: 2px;
 }

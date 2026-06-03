@@ -1,20 +1,32 @@
 {
   "name": "static-25d-hero",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "A cinematic 2.5D / isometric landing hero page built with Vite + TypeScript + GSAP.",
+  "description": "A cinematic 2.5D / isometric landing hero page — Next.js + React + Tailwind CSS v4",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "check": "tsc --noEmit"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "devDependencies": {
-    "typescript": "^5.5.4",
-    "vite": "^5.4.2"
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.184.1",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "gsap": "^3.12.5"
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "@tailwindcss/postcss": "^4.3.0",
+    "autoprefixer": "^10.5.0",
+    "next": "^16.2.7",
+    "postcss": "^8.5.15",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.0",
+    "three": "^0.184.0"
   }
 }

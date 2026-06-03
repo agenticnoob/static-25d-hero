@@ -8,11 +8,11 @@ yarn-error.log*
 .vscode/
 .idea/
 .DS_Store
-
+.next
 # Build output
 dist/
 dist-ssr/
-
+out
 # Dependencies
 node_modules/
 

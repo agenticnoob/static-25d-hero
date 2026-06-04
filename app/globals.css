@@ -144,17 +144,41 @@ body {
 .narrative-section {
   align-items: center;
   justify-content: center;
+  min-height: 128svh;
   pointer-events: none;
 }
 
 .narrative-section-inner {
   max-width: 760px;
+  min-height: 100svh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   transform: translate3d(0, 0, 0);
-  transition:
-    opacity 0.24s cubic-bezier(0.28, 0.72, 0.18, 1),
-    filter 0.24s cubic-bezier(0.28, 0.72, 0.18, 1),
-    transform 0.24s cubic-bezier(0.28, 0.72, 0.18, 1);
+  transition: none;
   will-change: opacity, filter, transform;
+}
+
+.narrative-section--observation {
+  min-height: 118svh;
+}
+
+.narrative-section--causality {
+  min-height: 134svh;
+}
+
+.narrative-section--recursion {
+  min-height: 142svh;
+}
+
+.narrative-section--selfReference {
+  min-height: 126svh;
+}
+
+.narrative-section--reconstruction {
+  min-height: 150svh;
 }
 
 .narrative-section--observation {
@@ -208,12 +232,14 @@ body {
 .narrative-section--reconstruction {
   align-items: flex-end;
   justify-content: flex-start;
-  padding-bottom: clamp(76px, 14svh, 148px);
+  padding-bottom: 0;
 }
 
 .narrative-section--reconstruction .narrative-section-inner {
   margin-left: clamp(28px, 11vw, 156px);
   max-width: 700px;
+  justify-content: flex-end;
+  padding-bottom: clamp(76px, 14svh, 148px);
   text-align: left;
 }
 
@@ -317,7 +343,16 @@ body {
   .narrative-section {
     align-items: center;
     justify-content: center;
+    min-height: 116svh;
     padding-bottom: 0;
+  }
+
+  .narrative-section--observation,
+  .narrative-section--causality,
+  .narrative-section--recursion,
+  .narrative-section--selfReference,
+  .narrative-section--reconstruction {
+    min-height: 116svh;
   }
 
   .narrative-section-inner,

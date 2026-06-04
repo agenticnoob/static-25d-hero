@@ -3,7 +3,10 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { homepageSections } from "@/content/homepage";
-import { getScrollStage, getStageIndex } from "@/lib/interaction";
+import {
+  getCinematicScrollStage,
+  getStageIndex,
+} from "@/lib/interaction";
 import WebGLSlab from "./WebGLSlab";
 import NarrativeSection from "./NarrativeSection";
 
@@ -34,7 +37,7 @@ const ENTRANCE_DELAYS: Record<string, number> = {
    ─────────────────────────────────────────────────────────────────
    Desktop:
      Background  : 0.8px / 0.6px  — low amplitude, mouse-driven
-     WebGL slab  : R3F scroll parallax (sceneStateRef.slabDropPx)
+     WebGL slab  : R3F stage pose via sceneStateRef
                    + physics rotation via physRef (also mouse-driven)
      Title       : -0.3px / -0.2px — subtle counter-parallax, mouse-driven
      Eyebrow / Subtitle / CTA: ZERO parallax (text must stay legible)
@@ -46,18 +49,21 @@ const ENTRANCE_DELAYS: Record<string, number> = {
 const TITLE_TX   = -0.3;
 const TITLE_TY   = -0.2;
 
-/* Scroll → slab CSS parallax */
-const SLAB_SCROLL_LERP   = 0.06;
-const SLAB_MAX_Y_DESKTOP = 72;
-const SLAB_MAX_Y_TOUCH   = 54;
+/* Scroll → WebGL time axis */
+const SCROLL_FOLLOW = 0.085;
+const SCROLL_VELOCITY_DAMPING = 0.82;
+const SCROLL_VELOCITY_LIMIT = 1.35;
 
 /* Mouse → WebGL physics (physRef) */
-const PHYS_SPRING  = 0.045;
-const PHYS_DAMPING = 0.82;
 const PHYS_REST_Y  = 0.18;
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+function smoothstep(edge0: number, edge1: number, value: number): number {
+  const x = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+  return x * x * (3 - 2 * x);
 }
 
 function scheduleFrame(callback: FrameRequestCallback): number {
@@ -98,20 +104,22 @@ export default function Hero() {
   });
 
   const scrollYRef     = useRef(0);
-  const scrollLerpedRef = useRef(0);
   const scrollProgressRef = useRef(0);
-  const scrollStageRef = useRef(getScrollStage(0));
+  const scrollVisualProgressRef = useRef(0);
+  const scrollVelocityRef = useRef(0);
   const sceneStateRef = useRef({
+    rawScrollProgress: 0,
     scrollProgress: 0,
     stageIndex: 0,
     stageProgress: 0,
-    slabDropPx: 0,
+    scrollVelocity: 0,
   });
 
   const mouseRef   = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
 
   const rafRef = useRef<number>(0);
+  const lastFrameAtRef = useRef(0);
 
   const isTouchDevice = useRef(false);
 
@@ -219,18 +227,15 @@ export default function Hero() {
         0,
         1
       );
-      scrollStageRef.current = getScrollStage(scrollProgressRef.current);
-      sceneStateRef.current.scrollProgress = scrollProgressRef.current;
-      sceneStateRef.current.stageIndex = getStageIndex(scrollStageRef.current.stage);
-      sceneStateRef.current.stageProgress = scrollStageRef.current.stageProgress;
-
       sectionsRef.current.forEach((section) => {
         const rect = section.getBoundingClientRect();
-        const sectionCenter = rect.top + rect.height / 2;
-        const distance = (sectionCenter - window.innerHeight / 2) /
-          Math.max(window.innerHeight, 1);
-        const presence = clamp(1 - Math.abs(distance), 0, 1);
-        const direction = distance > 0 ? 1 : -1;
+        const viewportH = Math.max(window.innerHeight, 1);
+        const travel = Math.max(rect.height + viewportH, 1);
+        const sectionProgress = clamp((viewportH - rect.top) / travel, 0, 1);
+        const enter = smoothstep(0.08, 0.28, sectionProgress);
+        const exit = 1 - smoothstep(0.72, 0.92, sectionProgress);
+        const presence = enter * exit;
+        const direction = sectionProgress < 0.5 ? 1 : -1;
         const inner = section.querySelector<HTMLElement>(".narrative-section-inner");
 
         section.dataset.active = presence >= 0.5 ? "true" : "false";
@@ -239,34 +244,56 @@ export default function Hero() {
           const quiet = 1 - presence;
           const visible = presence > 0.06;
           inner.style.visibility = visible ? "visible" : "hidden";
-          inner.style.opacity = visible ? (0.08 + presence * 0.92).toFixed(3) : "0";
-          inner.style.filter = `blur(${(quiet * 2.0).toFixed(2)}px)`;
+          inner.style.opacity = visible ? (0.12 + presence * 0.88).toFixed(3) : "0";
+          inner.style.filter = `blur(${(quiet * 1.35).toFixed(2)}px)`;
           inner.style.transform =
-            `translate3d(0, ${((quiet * 28 * direction)).toFixed(2)}px, 0) scale(${(0.986 + presence * 0.014).toFixed(3)})`;
+            `translate3d(0, ${((quiet * 18 * direction)).toFixed(2)}px, 0) scale(${(0.992 + presence * 0.008).toFixed(3)})`;
         }
       });
+    };
 
-      scrollLerpedRef.current = lerp(
-        scrollLerpedRef.current,
-        scrollYRef.current,
-        SLAB_SCROLL_LERP
+    const syncSceneState = (dt: number) => {
+      const raw = scrollProgressRef.current;
+      const before = scrollVisualProgressRef.current;
+      const follow = prefersReduced ? 1 : SCROLL_FOLLOW;
+      const visual = lerp(before, raw, follow);
+      const instantVelocity = dt > 0 ? (visual - before) / dt : 0;
+      const nextVelocity = lerp(
+        scrollVelocityRef.current * SCROLL_VELOCITY_DAMPING,
+        instantVelocity,
+        0.22
       );
-      const sy = scrollLerpedRef.current;
-      const norm = sy / Math.max(window.innerHeight, 1);
-      sceneStateRef.current.slabDropPx = prefersReduced
+      const cinematicStage = getCinematicScrollStage(visual);
+
+      scrollVisualProgressRef.current = visual;
+      scrollVelocityRef.current = clamp(
+        nextVelocity,
+        -SCROLL_VELOCITY_LIMIT,
+        SCROLL_VELOCITY_LIMIT
+      );
+
+      sceneStateRef.current.rawScrollProgress = raw;
+      sceneStateRef.current.scrollProgress = visual;
+      sceneStateRef.current.stageIndex = getStageIndex(cinematicStage.stage);
+      sceneStateRef.current.stageProgress = cinematicStage.stageProgress;
+      sceneStateRef.current.scrollVelocity = prefersReduced
         ? 0
-        : norm * (isTouch ? SLAB_MAX_Y_TOUCH : SLAB_MAX_Y_DESKTOP);
+        : scrollVelocityRef.current;
     };
 
     const onScroll = () => {
       scrollYRef.current = window.scrollY;
-      updateScrollState();
     };
     onScroll();
+    updateScrollState();
     window.addEventListener("scroll", onScroll, { passive: true });
 
     /* ── RAF loop ─────────────────────────────────────── */
-    const tick = () => {
+    const tick = (now: number) => {
+      const previous = lastFrameAtRef.current || now;
+      const dt = clamp((now - previous) / 1000, 0.001, 0.05);
+      lastFrameAtRef.current = now;
+
       const t = 0.055;
       currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
       currentRef.current.y = lerp(currentRef.current.y, mouseRef.current.y, t);
@@ -274,6 +301,7 @@ export default function Hero() {
       const my = prefersReduced ? 0 : currentRef.current.y;
 
       updateScrollState();
+      syncSceneState(dt);
 
       /* ── Mouse target — drives WebGL mesh rotation via spring physics in SlabMesh ── */
       /* Hero.tsx writes target every frame (window-level pointermove, no blind spot).
@@ -320,8 +348,6 @@ export default function Hero() {
         isolation: "isolate",
       }}
     >
-      {/* (VoidField3D now lives inside WebGLSlab — see /components/WebGLSlab.tsx) */}
-
       {/* ── Brand (top-left) ──────────────────────────── */}
       <header
         className="brand absolute z-10 select-none"

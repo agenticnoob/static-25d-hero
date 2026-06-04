@@ -27,10 +27,11 @@ export interface InteractionState {
 }
 
 export interface SceneState {
+  rawScrollProgress: number;
   scrollProgress: number;
   stageIndex: number;
   stageProgress: number;
-  slabDropPx: number;
+  scrollVelocity: number;
 }
 
 export function clamp01(value: number): number {
@@ -52,6 +53,20 @@ export function getScrollStage(progress: number): {
   return {
     stage: SCROLL_STAGES[index],
     stageProgress,
+  };
+}
+
+export function getCinematicScrollStage(progress: number): {
+  stage: ScrollStage;
+  stageProgress: number;
+} {
+  const base = getScrollStage(progress);
+  const held = clamp01((base.stageProgress - 0.14) / 0.72);
+  const eased = held * held * held * (held * (held * 6 - 15) + 10);
+
+  return {
+    stage: base.stage,
+    stageProgress: eased,
   };
 }
 

@@ -2,9 +2,11 @@
 
 ## 1. Aesthetic Direction
 
-**Reference point:** Architectural photography books, film noir establishing shots, Swiss editorial design, and high-end SaaS product pages (Linear, Vercel, Stripe).
+**Reference point:** Architectural photography books, film noir establishing shots, Swiss editorial design, Apple product pages, Stripe spatial storytelling, Linear restraint, Vercel contrast, and Raycast-level interaction polish.
 
 The page should feel like a *quiet room* — not quiet because nothing is happening, but because every element that exists has earned its place.
+
+The interaction target is premium product-page motion: fluid, restrained, legible, and physically believable. Avoid cheap spectacle: no random flying particles, no neon cyberpunk wash, no flashing, no crowded screen, no decorative WebGL that ignores the narrative.
 
 ---
 
@@ -81,20 +83,23 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 | Layer | Element | z-index | Parallax |
 |-------|---------|---------|---------|
-| z-0 | Background gradient | 0 | Low (0.8px/0.6px) |
-| z-0 | Grid overlay | 0 | Zero |
-| z-3 | Void particle field | 3 | Zero |
+| z-0 | Background gradient / atmosphere | 0 | Low, Lenis/ScrollTrigger aware |
+| z-0 | Grid or soft depth field | 0 | Zero or very low |
 | z-4 | Atmospheric glow | 4 | Zero |
-| z-5 | WebGL slab | 5 | Medium scroll |
+| z-5 | WebGL slab / physics object | 5 | Stage pose + pointer tilt + restrained rigid-body response |
 | z-10 | Brand / Meta | 10 | Zero |
-| z-20 | Narrative copy | 20 | Scroll-stage presence |
+| z-20 | Narrative copy / CTA | 20 | ScrollTrigger section state + Motion micro-interactions |
 
 ### Spatial Composition
 
 - WebGL slab is the **single focal object**. Stage effects must modify this slab, not introduce a second focal mesh.
+- The visual field must read as foreground / midground / background:
+  - Foreground: narrative copy, CTA, fine line UI, optional glass-like panels.
+  - Midground: WebGL slab as the interactive narrative object.
+  - Background: fixed atmospheric gradient, depth field, and soft shadow/glow.
 - Slab sits in the lower half of the viewport, receding toward a vanishing point.
 - The fixed WebGL wrapper must remain `top: 0`, `bottom: 100svh`, and `transform: none` during scroll.
-- Scroll-driven slab movement happens inside R3F through `sceneStateRef.slabDropPx`; never apply scroll transforms to the fixed DOM wrapper.
+- Scroll-driven slab movement happens inside R3F through a damped visual scroll value, stage pose interpolation, and subtle scroll-velocity response. Scale, pitch, yaw, roll, and position may change by stage; never apply scroll transforms to the fixed DOM wrapper.
 - Narrative copy changes posture by stage:
   - Observation: centered thesis.
   - Causality: left-weighted, explaining the chain.
@@ -103,6 +108,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
   - Reconstruction: lower-left final proposition with CTA.
 - Atmospheric radial glow sits behind the slab, creating depth separation
 - Negative space is treated as a compositional element, not emptiness
+- Glass, translucency, fine borders, gradients, and shadow layers are allowed when they clarify hierarchy. They must stay soft and low saturation.
 
 ### Responsive Strategy
 
@@ -119,10 +125,11 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 ### Principles
 
-1. **Animation serves depth, not decoration.** Every motion should feel like physical consequence — inertia, gravity, settling — not a loading state or feedback mechanism.
-2. **No bounce, no overshoot, no elastic.** Motion uses `cubic-bezier(0.28, 0.72, 0.18, 1)` — a slow-in, confident-out ease. Entrance uses this. Nothing else uses it.
-3. **Entrance is the only orchestrated animation.** Staggered fade+translate, ~1s total. On touch devices, disabled entirely.
-4. **Parallax is ambient, not interactive.** It responds to pointer position continuously, not on discrete events.
+1. **Animation serves depth, not decoration.** Every motion should feel like physical consequence: inertia, gravity, friction, settling, or state transition.
+2. **No bounce, no elastic spectacle.** Rapier physics is allowed because it is now a product requirement, but collision response must feel heavy and damped, not playful or game-like.
+3. **Scroll is the primary timeline.** Lenis normalizes scroll input; GSAP ScrollTrigger owns pin, scrub, progress, and section transitions.
+4. **Motion owns UI micro-interactions.** Buttons, text entrance, small layout transitions, and hover feedback should use Motion instead of ad hoc CSS/JS mixes.
+5. **Parallax is ambient, not noisy.** It responds continuously to scroll and pointer position, but never makes body copy hard to read.
 
 ### Parallax Depth Map
 
@@ -131,7 +138,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | Background | `tx=0.8px, ty=0.6px` | Barely perceptible; just enough to feel spatial |
 | Title | `tx=-0.3px, ty=-0.2px` | Counter-displacement; creates depth separation from background |
 | Eyebrow / Subtitle / CTA | `0` | Text must remain legible; any parallax hurts readability |
-| WebGL slab | Mouse-driven tilt + scroll-stage pose | Inertia + gravity, plus stage-aware x/y/z/scale/yaw/roll |
+| WebGL slab | Mouse-driven tilt + damped scroll-stage pose | Inertia + gravity, plus stage-aware x/y/z/scale/yaw/roll/pitch and restrained velocity response |
 
 ### Physics Model (WebGL Slab)
 
@@ -150,9 +157,26 @@ This is intentionally **not** a 1:1 tilt. The lag and inertia make it feel physi
 
 ### Scroll Stage Presence
 
-Each narrative section receives `data-active` from the unified `Hero.tsx` rAF loop. Active text is full opacity; inactive text recedes through lower opacity, slight blur, and restrained y translation. The presence effect must preserve readability and should not become a carousel or slideshow.
+Each narrative section receives `data-active` from the unified `Hero.tsx` rAF loop. Sections use sticky inner content and varied `svh` lengths so scrolling feels like a sequence of held camera moments, not equal-height slides. Active text is full opacity; inactive text recedes through lower opacity, slight blur, and restrained y translation. These scroll-driven values are written directly by the rAF loop, so `.narrative-section-inner` must not also transition `opacity`, `filter`, or `transform` in CSS.
 
-`prefers-reduced-motion` keeps scroll-stage state updates active, but disables pointer/title parallax and slab scroll drop. This keeps the page readable without motion dependency.
+The WebGL slab does not consume raw scroll progress directly. `Hero.tsx` keeps raw progress for content presence, then derives a damped visual progress for `sceneStateRef`. Stage progress uses short hold regions at the beginning and end of each stage, so the slab settles between spatial poses instead of moving at a constant mechanical rate.
+
+### Target Motion Architecture
+
+The next implementation should replace the custom rAF-driven scroll system with a clearer stack:
+
+| Layer | Library | Responsibility |
+|-------|---------|----------------|
+| Smooth input | Lenis | Wheel/touch smoothing, normalized velocity, reduced-motion fallback |
+| Timeline | GSAP ScrollTrigger | `pin`, `scrub`, section progress, stage transitions |
+| Shared state | Zustand | `scrollProgress`, `scrollVelocity`, `mouse`, `viewport`, `sceneMode` |
+| WebGL rendering | Three.js / R3F / drei | Camera, material helpers, slab composition, background scene |
+| Physics | `@react-three/rapier` | Rigid-body inertia, collision, mass, damping, physical settling |
+| UI motion | Motion | Text entrance, CTA hover, layout transitions, subtle panel movement |
+
+One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions, and rAF all animate the same `transform` or `opacity` at the same time.
+
+`prefers-reduced-motion` keeps scroll-stage state updates active, but disables pointer/title parallax. This keeps the page readable without motion dependency.
 
 ---
 
@@ -161,14 +185,17 @@ Each narrative section receives `data-active` from the unified `Hero.tsx` rAF lo
 ### Scene
 
 - **Camera:** `position [0, 2.0, 5.2]`, `fov 42` — narrow FOV for architectural feel
-- **Lighting:** Ambient `#1a2030` (cool dark blue), Directional from `[3,6,4]` with warm-white `#c8d8f0`, Point at `[0,-2,2]` with deep blue `#2040a0` for ground bounce
+- **Lighting:** Ambient `#1a2030` (cool dark blue), Directional from `[3,6,4]` with warm-white `#c8d8f0`, Point at `[0,-2,2]` with deep blue `#2040a0` for underside separation
 - **Background:** Transparent (alpha canvas)
+- **drei usage:** Prefer `Environment`, `ContactShadows`, camera helpers, and material utilities only when they improve depth or reduce boilerplate. Do not add helper effects that become a second focal point.
+- **Rapier usage:** Use fixed or kinematic guide bodies for invisible constraints, and one damped dynamic/kinematic rigid body for the slab where it improves inertia. Collisions should be subtle and architectural.
 
 ### Slab Mesh
 
 - `boxGeometry [4.2, 0.035, 2.6]` — a flat, wide slab
-- `STAGE_POSES` defines stage-aware x/y/z/scale/yaw/roll offsets. These are small architectural shifts, not animation set pieces.
+- `STAGE_POSES` defines stage-aware x/y/z/scale/yaw/roll/pitch offsets. These are visible spatial changes, but still restrained enough to avoid a game-like flip.
 - Custom `shaderMaterial` with:
+  - Grey-white slab base that reads brighter than the obsidian background
   - Anti-aliased grid lines via `fwidth` (no mipmap artifacts)
   - Two grid scales: coarse (0.08) + fine (0.02)
   - Diagonal cross-hatch accent
@@ -181,14 +208,6 @@ Each narrative section receives `data-active` from the unified `Hero.tsx` rAF lo
   - Self-reference mirror echo
   - Reconstruction network re-layout
 
-### Ground Plane
-
-- Perspective grid receding toward vanishing point at `[0.5, 1.0]`
-- Radial + depth fade alpha
-- Slow scanline sweep (time-driven, barely visible)
-- Vanishing point glow
-- Tracks the slab's stage pose subtly, at reduced amplitude, so the ground supports the focal object without becoming a second object.
-
 ### Canvas Sizing Rule
 
 The WebGL DOM wrapper must stay:
@@ -197,7 +216,7 @@ The WebGL DOM wrapper must stay:
 className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
 ```
 
-Do not add a CSS `transform`, `filter`, or `perspective` to this wrapper or any ancestor that should behave as viewport-fixed. Those properties can create a fixed-position containing block and make the canvas appear to move with page scroll. Use R3F object transforms for slab/ground movement instead.
+Do not add a CSS `transform`, `filter`, or `perspective` to this wrapper or any ancestor that should behave as viewport-fixed. Those properties can create a fixed-position containing block and make the canvas appear to move with page scroll. Use R3F object transforms for slab movement instead.
 
 ---
 
@@ -207,9 +226,9 @@ Without explicit user direction, the following are **constraints**, not suggesti
 
 - **Font:** Georgia. Never swap for Inter/Roboto/system-ui.
 - **Palette:** Obsidian + warm off-white. Never use `#FFFFFF` or saturated accent colors.
-- **No bounce/overshoot:** `cubic-bezier(0.28, 0.72, 0.18, 1)` only. No `ease-out-back`, no spring libraries.
+- **No cheap bounce/overshoot:** physics and Motion springs are allowed only when heavily damped and visually restrained. No `ease-out-back`, elastic, or playful rebound.
 - **Single focal object:** The slab is the only 3D element. Never add a second mesh, particle burst, or competing visual.
 - **CTA:** Pure CSS hover, zero JS handlers. Never attach React event handlers to the CTA.
 - **Parallax:** Title counter-parallax only on non-touch devices. Narrative kicker/body/CTA = zero pointer parallax.
 - **Mobile:** DPR capped at 1. Entrance animation disabled. Parallax amplitude halved.
-- **`prefers-reduced-motion`:** Entrance animation, pointer/title parallax, and slab scroll drop must be killed when set. Scroll-stage readability state may still update.
+- **`prefers-reduced-motion`:** Entrance animation and pointer/title parallax must be killed when set. Scroll-stage readability state may still update.

@@ -85,6 +85,7 @@ const slabFrag = /* glsl */ `
   uniform float uScrollProgress;
   uniform float uStageIndex;
   uniform float uStageProgress;
+  uniform float uScrollVelocity;
   uniform vec2  uMouse;
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -116,34 +117,36 @@ const slabFrag = /* glsl */ `
   }
 
   void main() {
-    vec3 col = vec3(0.056, 0.068, 0.090);
-    col += noise(vUv * 40.0) * 0.015;
+    vec3 col = vec3(0.58, 0.58, 0.55);
+    col += noise(vUv * 40.0) * 0.035;
 
-    float g1 = grid(vUv, 0.08) * 0.12;
-    float g2 = grid(vUv, 0.02) * 0.045;
+    float g1 = grid(vUv, 0.08) * 0.17;
+    float g2 = grid(vUv, 0.02) * 0.055;
 
     float diag = smoothstep(0.46, 0.50, abs(vUv.x - vUv.y)) * 0.04;
     diag *= step(0.1, vUv.x) * step(vUv.x, 0.9)
           * step(0.1, vUv.y) * step(vUv.y, 0.9);
 
-    col += vec3(0.35, 0.50, 0.68) * max(g1, g2)
-         + vec3(0.35, 0.50, 0.68) * diag * 0.5;
+    col += vec3(0.86, 0.85, 0.80) * max(g1, g2)
+         + vec3(0.78, 0.77, 0.72) * diag * 0.55;
 
     float edgeDist = min(min(vUv.x, 1.0 - vUv.x), min(vUv.y, 1.0 - vUv.y));
     float edge = 1.0 - smoothstep(0.0, 0.04, edgeDist);
-    col += vec3(0.08, 0.14, 0.22) * edge * 0.5;
+    col -= vec3(0.26, 0.26, 0.24) * edge * 0.34;
+    col += vec3(0.96, 0.94, 0.88) * edge * 0.13;
 
     vec3 lightDir = normalize(vec3(0.2, 1.0, 0.4));
-    col += vec3(0.03, 0.06, 0.10)
-         * clamp(dot(vNormal, lightDir), 0.0, 1.0) * 0.3;
+    col += vec3(0.18, 0.18, 0.16)
+         * clamp(dot(vNormal, lightDir), 0.0, 1.0) * 0.22;
 
     float dist  = length(vUv - 0.5);
     float pulse = sin(uTime * 1.8) * 0.5 + 0.5;
     float glow  = clamp(1.0 - dist / 0.35, 0.0, 1.0) * pulse * 0.025;
-    col += vec3(0.25, 0.45, 0.75) * glow;
+    col += vec3(0.95, 0.93, 0.86) * glow;
 
     float sheen = clamp(vUv.y + uMouse.y * 0.1 - 0.4, 0.0, 1.0) * 0.03;
-    col += vec3(0.10, 0.18, 0.28) * sheen;
+    col += vec3(0.88, 0.86, 0.78) * sheen;
+    col += vec3(0.98, 0.96, 0.88) * clamp(abs(uScrollVelocity) * 0.22, 0.0, 0.05);
 
     float stageDepth = smoothstep(0.0, 1.0, uScrollProgress);
     float phase = uStageIndex + uStageProgress;
@@ -157,8 +160,8 @@ const slabFrag = /* glsl */ `
       (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.13, 0.30)))) +
       (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.88, 0.59)))) +
       (1.0 - smoothstep(0.010, 0.034, length(vUv - vec2(0.58, 0.48))));
-    col += vec3(0.20, 0.38, 0.52) * (traceA * 0.115 + traceB * 0.060 + traceC * 0.045) * causalTrace * tracePulse;
-    col += vec3(0.36, 0.54, 0.62) * traceNodes * causalTrace * 0.045;
+    col += vec3(0.92, 0.90, 0.84) * (traceA * 0.135 + traceB * 0.070 + traceC * 0.052) * causalTrace * tracePulse;
+    col += vec3(0.98, 0.96, 0.88) * traceNodes * causalTrace * 0.052;
 
     float recursion = smoothstep(1.85, 2.25, phase)
                     * (1.0 - smoothstep(3.10, 3.55, phase));
@@ -170,18 +173,18 @@ const slabFrag = /* glsl */ `
     float innerLoop = 1.0 - smoothstep(0.006, 0.025, abs(loopRadius - (0.185 - loopWave * 0.55)));
     float loopGap = smoothstep(-0.30, 0.56, sin(loopAngle + uTime * 0.30));
     float loopHead = exp(-abs(sin(loopAngle - uTime * 0.38)) * 10.0);
-    col += vec3(0.17, 0.38, 0.54) * loopLine * loopGap * recursion * 0.115;
-    col += vec3(0.28, 0.46, 0.55) * innerLoop * (1.0 - loopGap * 0.55) * recursion * 0.055;
-    col += vec3(0.42, 0.58, 0.62) * loopHead * loopLine * recursion * 0.040;
+    col += vec3(0.92, 0.90, 0.84) * loopLine * loopGap * recursion * 0.135;
+    col += vec3(0.78, 0.77, 0.72) * innerLoop * (1.0 - loopGap * 0.55) * recursion * 0.070;
+    col += vec3(1.00, 0.98, 0.90) * loopHead * loopLine * recursion * 0.048;
 
     float selfRef = smoothstep(2.82, 3.12, phase)
                   * (1.0 - smoothstep(3.72, 4.05, phase));
     float mirrorLine = 1.0 - smoothstep(0.002, 0.014, abs(vUv.x - 0.5));
     float mirrorEcho = 1.0 - smoothstep(0.012, 0.060, abs(vUv.x - (1.0 - vUv.y * 0.18 - 0.41)));
     float lens = exp(-length((vUv - vec2(0.5, 0.52)) * vec2(1.4, 0.85)) * 3.2);
-    col += vec3(0.26, 0.33, 0.40) * mirrorLine * selfRef * 0.055;
-    col += vec3(0.18, 0.30, 0.38) * mirrorEcho * lens * selfRef * 0.070;
-    col += vec3(0.10, 0.16, 0.20) * selfRef * lens * 0.060;
+    col += vec3(0.98, 0.96, 0.88) * mirrorLine * selfRef * 0.064;
+    col += vec3(0.78, 0.77, 0.72) * mirrorEcho * lens * selfRef * 0.082;
+    col -= vec3(0.12, 0.12, 0.11) * selfRef * lens * 0.040;
 
     float rebuild = smoothstep(3.50, 3.98, phase);
     float settle = smoothstep(0.0, 1.0, uStageProgress);
@@ -202,156 +205,14 @@ const slabFrag = /* glsl */ `
       (1.0 - smoothstep(0.010, 0.032, length(vUv - n3))) +
       (1.0 - smoothstep(0.010, 0.032, length(vUv - n4))) +
       (1.0 - smoothstep(0.010, 0.032, length(vUv - n5)));
-    col += vec3(0.22, 0.42, 0.46) * network * rebuild * 0.065;
-    col += vec3(0.42, 0.55, 0.50) * nodes * rebuild * 0.095;
-    col *= 1.0 - stageDepth * 0.045;
+    col += vec3(0.88, 0.87, 0.80) * network * rebuild * 0.080;
+    col += vec3(1.00, 0.97, 0.88) * nodes * rebuild * 0.105;
+    col *= 1.0 + stageDepth * 0.035;
+    col = clamp(col, vec3(0.0), vec3(1.0));
 
     gl_FragColor = vec4(col, 1.0);
   }
 `;
-
-/* ─────────────────────────────────────────────────────────────────
-   Ground plane shaders
-   ───────────────────────────────────────────────────────────────── */
-
-const groundVert = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-const groundFrag = /* glsl */ `
-  precision highp float;
-  uniform float uTime;
-  varying vec2 vUv;
-
-  void main() {
-    vec2 center = vec2(0.5, 1.0);
-    float dist = length(vUv - center);
-    float radialFade = 1.0 - smoothstep(0.0, 0.62, dist);
-    float depthFade = smoothstep(0.0, 0.35, vUv.y);
-    float alpha = radialFade * depthFade * 0.22;
-    vec3 col = vec3(0.055, 0.075, 0.11);
-    float scan = sin(vUv.y * 160.0 + uTime * 0.25) * 0.5 + 0.5;
-    col += scan * 0.006;
-    float vpDist = length(vUv - vec2(0.5, 1.0));
-    float vpGlow = exp(-vpDist * 7.0) * 0.18;
-    col += vec3(0.25, 0.45, 0.75) * vpGlow;
-    gl_FragColor = vec4(col, alpha);
-  }
-`;
-
-/* ─────────────────────────────────────────────────────────────────
-   VoidField3D — particle field as Three.js Points
-   Replaces the old 2D Canvas VoidField. Same visual:
-     - 55 particles desktop / 28 mobile
-     - x random across width, y in lower 55% of height
-     - flicker via sin(t*speed + phase)
-     - color rgba(180, 215, 255)
-   Particles are positioned in NDC (-1..1) and rendered with
-   gl_PointSize so they stay screen-space sized regardless of camera.
-   ───────────────────────────────────────────────────────────────── */
-
-const voidVert = /* glsl */ `
-  attribute float aOpacity;
-  attribute float aSize;
-  attribute float aPhase;
-  attribute float aSpeed;
-  uniform float uTime;
-  uniform float uPixelRatio;
-  varying float vOpacity;
-
-  void main() {
-    /* NDC fullscreen placement: ignore camera, particles live in screen space */
-    vec4 ndc = vec4(position.xy, 0.0, 1.0);
-    gl_Position = ndc;
-
-    /* Flicker opacity: sin(t * speed + phase) → [0,1] */
-    float flicker = sin(uTime * aSpeed * 60.0 + aPhase) * 0.5 + 0.5;
-    vOpacity = aOpacity * (0.5 + flicker * 0.5);
-
-    /* Point size in pixels: 1.5-3.5 * pixelRatio for retina */
-    gl_PointSize = aSize * 2.5 * uPixelRatio;
-  }
-`;
-
-const voidFrag = /* glsl */ `
-  precision highp float;
-  varying float vOpacity;
-  void main() {
-    /* Circular soft particle: distance from point center */
-    vec2 c = gl_PointCoord - 0.5;
-    float d = length(c);
-    if (d > 0.5) discard;
-    float a = vOpacity * (1.0 - smoothstep(0.0, 0.5, d));
-    gl_FragColor = vec4(0.706, 0.843, 1.0, a);  /* rgba(180, 215, 255) */
-  }
-`;
-
-function VoidField3D() {
-  const matRef = useRef<THREE.ShaderMaterial>(null);
-
-  const { geometry, uniforms } = useMemo(() => {
-    const isMobile =
-      typeof window !== "undefined" &&
-      (window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
-       "ontouchstart" in window);
-    const count = isMobile ? 28 : 55;
-    const dpr   = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2);
-
-    const positions = new Float32Array(count * 3);
-    const opacities = new Float32Array(count);
-    const sizes     = new Float32Array(count);
-    const phases    = new Float32Array(count);
-    const speeds    = new Float32Array(count);
-
-    for (let i = 0; i < count; i++) {
-      /* x: -1..1, y: lower 55% in NDC (Y flipped: 2D top-left → NDC bottom-left) */
-      positions[i * 3 + 0] = Math.random() * 2 - 1;
-      positions[i * 3 + 1] = 1.0 - (0.45 + Math.random() * 0.55) * 2;
-      positions[i * 3 + 2] = 0;
-      opacities[i] = Math.random() * 0.18 + 0.04;
-      sizes[i]     = Math.random() * 1.4 + 0.3;
-      phases[i]    = Math.random() * Math.PI * 2;
-      speeds[i]    = Math.random() * 0.00025 + 0.00008;
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute("aOpacity", new THREE.BufferAttribute(opacities, 1));
-    geo.setAttribute("aSize",    new THREE.BufferAttribute(sizes, 1));
-    geo.setAttribute("aPhase",   new THREE.BufferAttribute(phases, 1));
-    geo.setAttribute("aSpeed",   new THREE.BufferAttribute(speeds, 1));
-
-    const u = {
-      uTime: { value: 0 },
-      uPixelRatio: { value: dpr },
-    };
-
-    return { geometry: geo, uniforms: u };
-  }, []);
-
-  useFrame(({ clock }) => {
-    if (matRef.current) {
-      matRef.current.uniforms.uTime.value = clock.getElapsedTime();
-    }
-  });
-
-  return (
-    <points geometry={geometry} renderOrder={-500} frustumCulled={false}>
-      <shaderMaterial
-        ref={matRef}
-        vertexShader={voidVert}
-        fragmentShader={voidFrag}
-        uniforms={uniforms}
-        transparent
-        depthTest={false}
-        depthWrite={false}
-      />
-    </points>
-  );
-}
 
 /* ─────────────────────────────────────────────────────────────────
    Physics constants
@@ -367,11 +228,11 @@ export const PHYS = {
 export const REST_TILT_Y = 0.18;
 
 const STAGE_POSES = [
-  { x: 0.00, y: 0.00, z: 0.00, scale: 1.00, yaw: 0.00, roll: 0.00 },
-  { x: -0.34, y: 0.02, z: 0.05, scale: 0.98, yaw: -0.06, roll: -0.012 },
-  { x: 0.30, y: 0.03, z: -0.04, scale: 1.03, yaw: 0.05, roll: 0.012 },
-  { x: 0.00, y: 0.09, z: 0.10, scale: 0.94, yaw: 0.00, roll: 0.000 },
-  { x: -0.22, y: -0.03, z: 0.02, scale: 1.04, yaw: -0.03, roll: -0.006 },
+  { x: 0.00, y: -0.02, z: 0.00, scale: 1.00, yaw: 0.00, roll: 0.00, pitch: 0.00 },
+  { x: -0.38, y: 0.02, z: 0.08, scale: 0.88, yaw: -0.18, roll: -0.030, pitch: -0.04 },
+  { x: 0.28, y: 0.08, z: -0.16, scale: 1.16, yaw: 0.22, roll: 0.045, pitch: 0.16 },
+  { x: 0.00, y: 0.15, z: 0.18, scale: 0.92, yaw: 0.00, roll: 0.000, pitch: -0.08 },
+  { x: -0.16, y: 0.06, z: -0.08, scale: 1.10, yaw: -0.08, roll: -0.016, pitch: 0.06 },
 ] as const;
 
 function smoothstep01(value: number): number {
@@ -391,6 +252,7 @@ function getStagePose(stageIndex: number, stageProgress: number) {
     scale: THREE.MathUtils.lerp(current.scale, next.scale, t),
     yaw: THREE.MathUtils.lerp(current.yaw, next.yaw, t),
     roll: THREE.MathUtils.lerp(current.roll, next.roll, t),
+    pitch: THREE.MathUtils.lerp(current.pitch, next.pitch, t),
   };
 }
 
@@ -429,53 +291,6 @@ function BgQuad() {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   GroundPlane
-   ───────────────────────────────────────────────────────────────── */
-
-const GROUND_UNIFORMS = { uTime: { value: 0 } };
-
-interface GroundPlaneProps {
-  sceneStateRef: React.MutableRefObject<SceneState>;
-}
-
-function GroundPlane({ sceneStateRef }: GroundPlaneProps) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const matRef = useRef<THREE.ShaderMaterial>(null);
-  const { viewport } = useThree();
-  const baseY = -1.18;
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (matRef.current) matRef.current.uniforms.uTime.value = t;
-    if (meshRef.current) {
-      const pose = getStagePose(
-        sceneStateRef.current.stageIndex,
-        sceneStateRef.current.stageProgress
-      );
-      const dropWorld =
-        sceneStateRef.current.slabDropPx * (viewport.height / Math.max(window.innerHeight, 1));
-      meshRef.current.position.x = pose.x * 0.55;
-      meshRef.current.position.y = baseY - dropWorld;
-      meshRef.current.position.z = pose.z * 0.65;
-    }
-  });
-
-  return (
-    <mesh ref={meshRef} position={[0, baseY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <planeGeometry args={[16, 10]} />
-      <shaderMaterial
-        ref={matRef}
-        vertexShader={groundVert}
-        fragmentShader={groundFrag}
-        uniforms={GROUND_UNIFORMS}
-        transparent
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────
    SlabMesh
    ───────────────────────────────────────────────────────────────── */
 
@@ -485,6 +300,7 @@ interface SlabUniforms {
   uScrollProgress: { value: number };
   uStageIndex: { value: number };
   uStageProgress: { value: number };
+  uScrollVelocity: { value: number };
   uMouse: { value: THREE.Vector2 };
 }
 
@@ -533,18 +349,21 @@ function SlabMesh({
     p.pos.y = Math.max(-0.55, Math.min(0.88, p.pos.y));
 
     if (slabRef.current) {
-      const pose = getStagePose(sceneStateRef.current.stageIndex, sceneStateRef.current.stageProgress);
-      const dropWorld =
-        sceneStateRef.current.slabDropPx * (viewport.height / Math.max(window.innerHeight, 1));
+      const scene = sceneStateRef.current;
+      const pose = getStagePose(scene.stageIndex, scene.stageProgress);
       const compactScale = isCompact ? 0.92 : 1;
+      const velocity = THREE.MathUtils.clamp(scene.scrollVelocity, -1.35, 1.35);
+      const velocityAbs = Math.abs(velocity);
 
-      slabRef.current.position.x = pose.x * compactScale;
-      slabRef.current.position.y = slabY + pose.y - dropWorld;
-      slabRef.current.position.z = pose.z;
-      slabRef.current.rotation.x = p.pos.y;
-      slabRef.current.rotation.y = p.pos.x + pose.yaw;
-      slabRef.current.rotation.z = pose.roll;
-      slabRef.current.scale.setScalar(slabScale * pose.scale * compactScale);
+      slabRef.current.position.x = (pose.x + velocity * 0.045) * compactScale;
+      slabRef.current.position.y = slabY + pose.y + velocityAbs * 0.018;
+      slabRef.current.position.z = pose.z - velocityAbs * 0.055;
+      slabRef.current.rotation.x = p.pos.y + pose.pitch + velocity * 0.105;
+      slabRef.current.rotation.y = p.pos.x + pose.yaw - velocity * 0.055;
+      slabRef.current.rotation.z = pose.roll + velocity * 0.026;
+      slabRef.current.scale.setScalar(
+        slabScale * pose.scale * compactScale * (1 + velocityAbs * 0.028)
+      );
     }
     if (slabMatRef.current) {
       slabMatRef.current.uniforms.uMouse.value.set(p.pos.x * 1.6, p.pos.y * 1.6);
@@ -556,6 +375,7 @@ function SlabMesh({
       slabMatRef.current.uniforms.uScrollProgress.value = scene.scrollProgress;
       slabMatRef.current.uniforms.uStageIndex.value = scene.stageIndex;
       slabMatRef.current.uniforms.uStageProgress.value = scene.stageProgress;
+      slabMatRef.current.uniforms.uScrollVelocity.value = scene.scrollVelocity;
     }
 
     invalidateRef.current();
@@ -585,7 +405,7 @@ function SlabMesh({
    ─────────────────────────────────────────────────────────────────
 
    All pointer tracking is handled by Hero.tsx (window-level pointermove).
-   This component only renders: background quad + ground + slab mesh.
+   This component only renders: background quad + slab mesh.
 
    Background quad uses an orthographic camera so it stays fixed
    regardless of the main perspective camera.
@@ -605,6 +425,7 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
       uScrollProgress: { value: 0 },
       uStageIndex: { value: 0 },
       uStageProgress: { value: 0 },
+      uScrollVelocity: { value: 0 },
       uMouse: { value: new THREE.Vector2(0, 0) },
     }),
     []
@@ -652,16 +473,12 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
         {/* NDC fullscreen background quad — fixed, no perspective */}
         <BgQuad />
 
-        {/* Particle field — replaces 2D VoidField canvas */}
-        <VoidField3D />
-
         <SlabMesh
           slabUniforms={slabUniforms}
           physRef={physRef}
           sceneStateRef={sceneStateRef}
           invalidateRef={invalidateRef}
         />
-        <GroundPlane sceneStateRef={sceneStateRef} />
       </Canvas>
     </div>
   );

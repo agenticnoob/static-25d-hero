@@ -42,7 +42,7 @@ export const homepageSections: HomepageSection[] = [
     title: "不是给旧结构加上 AI，而是重建空间。",
     body: "复杂度不会消失。稀缺的能力会转向目标定义、系统治理，以及让人和 AI 都能理解的结构。",
     cta: {
-      href: "#",
+      href: "https://github.com/noobli",
       label: "开始交流",
     },
   },

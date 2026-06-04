@@ -13,6 +13,7 @@ export default function NarrativeSection({
   titleRef,
 }: NarrativeSectionProps) {
   const stageClass = `narrative-section--${section.stage}`;
+  const TitleTag = isIntro ? "h1" : "h2";
 
   return (
     <section
@@ -25,20 +26,23 @@ export default function NarrativeSection({
         <p className={`${isIntro ? "eyebrow " : ""}narrative-kicker mb-6`}>
           {section.kicker}
         </p>
-        <h2
+        <TitleTag
           ref={titleRef}
           id={`section-${section.stage}`}
           className={`${isIntro ? "title " : ""}narrative-title`}
         >
           {section.title}
-        </h2>
+        </TitleTag>
         <p className={`${isIntro ? "subtitle " : ""}narrative-body`}>
           {section.body}
         </p>
 
         {section.cta ? (
           <div className="cta-row mt-9">
-            <a href={section.cta.href} className="cta-link group inline-flex items-center gap-3">
+            <a
+              href={section.cta.href}
+              className="cta-link group inline-flex items-center gap-3"
+            >
               <span className="cta-label">{section.cta.label}</span>
               <span className="cta-arrow" aria-hidden="true">→</span>
             </a>

@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import * as THREE from "three";
+import { homepageSections } from "@/content/homepage";
+import { getScrollStage, getStageIndex } from "@/lib/interaction";
 import WebGLSlab from "./WebGLSlab";
-import VoidField from "./VoidField";
+import NarrativeSection from "./NarrativeSection";
 
 /* ─────────────────────────────────────────────────────────────────
    Entrance animation — staggered fade + translate
@@ -27,57 +30,87 @@ const ENTRANCE_DELAYS: Record<string, number> = {
 };
 
 /* ─────────────────────────────────────────────────────────────────
-   Parallax calibration — requestAnimationFrame + lerp
+   Parallax calibration
    ─────────────────────────────────────────────────────────────────
-   Background   (depth-0): 0.8px / 0.6px  — low amplitude
-   WebGL slab   (depth-3): scroll-driven   — medium amplitude + counter-rotate
-   Title        (depth-4): -0.3px / -0.2px — extremely subtle counter
-   Eyebrow / Subtitle / CTA: ZERO parallax
+   Desktop:
+     Background  : 0.8px / 0.6px  — low amplitude, mouse-driven
+     WebGL slab  : CSS scroll parallax (translateY + rotateX/rotateY via slabRef)
+                   + physics rotation via physRef (also mouse-driven)
+     Title       : -0.3px / -0.2px — subtle counter-parallax, mouse-driven
+     Eyebrow / Subtitle / CTA: ZERO parallax (text must stay legible)
+   Mobile:
+     Background  : 0.3px / 0.2px  — reduced
+     Title        : 0 (disabled on touch)
    ───────────────────────────────────────────────────────────────── */
 
-const BG_TX = 0.8;
-const BG_TY = 0.6;
+const TITLE_TX   = -0.3;
+const TITLE_TY   = -0.2;
 
-const TITLE_TX = -0.3;
-const TITLE_TY = -0.2;
+/* Scroll → slab CSS parallax */
+const SLAB_SCROLL_LERP   = 0.06;
+const SLAB_MAX_Y         = 55;
+const SLAB_COUNTER_ROTATE_X = 0.025;
+const SLAB_COUNTER_ROTATE_Y = 0.015;
 
-/* Scroll → slab position/rotation mapping */
-const SLAB_SCROLL_LERP = 0.06; // smooth arrival
-const SLAB_MAX_Y = 55;          // px — slab drops 55px over full viewport scroll
-const SLAB_COUNTER_ROTATE_X = 0.025; // rotateX counter-tilt on scroll
-const SLAB_COUNTER_ROTATE_Y = 0.015; // rotateY counter-tilt on scroll
+/* Mouse → WebGL physics (physRef) */
+const PHYS_SPRING  = 0.045;
+const PHYS_DAMPING = 0.82;
+const PHYS_REST_Y  = 0.18;
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Hero
+   ───────────────────────────────────────────────────────────────── */
+
 export default function Hero() {
   /* ── Refs ─────────────────────────────────────────────── */
-  const bgRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const slabRef = useRef<HTMLDivElement>(null);   // DOM container of WebGLSlab
+  const titleRef  = useRef<HTMLHeadingElement>(null);
+  const slabRef   = useRef<HTMLDivElement>(null);
+  const slabPhysRef = useRef<{
+    pos:    THREE.Vector2;
+    vel:    THREE.Vector2;
+    target: THREE.Vector2;
+    active: boolean;
+  }>({
+    pos:    new THREE.Vector2(0, PHYS_REST_Y),
+    vel:    new THREE.Vector2(0, 0),
+    target: new THREE.Vector2(0, PHYS_REST_Y),
+    active: false,
+  });
 
-  // Scroll state
-  const scrollYRef = useRef(0);
+  const scrollYRef     = useRef(0);
   const scrollLerpedRef = useRef(0);
+  const scrollProgressRef = useRef(0);
+  const scrollStageRef = useRef(getScrollStage(0));
+  const sceneStateRef = useRef({
+    scrollProgress: 0,
+    stageIndex: 0,
+    stageProgress: 0,
+  });
 
-  // Mouse parallax state (background + title)
-  const mouseRef = useRef({ x: 0, y: 0 });
+  const mouseRef   = useRef({ x: 0, y: 0 });
   const currentRef = useRef({ x: 0, y: 0 });
 
-  // rAF handle
   const rafRef = useRef<number>(0);
+
+  const isTouchDevice = useRef(false);
 
   /* ── Entrance animation ──────────────────────────────── */
   const hasRun = useRef(false);
   useEffect(() => {
     if (typeof window === "undefined" || hasRun.current) return;
-    const prefersReduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     hasRun.current = true;
 
-    if (prefersReduced) {
+    isTouchDevice.current =
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
+      "ontouchstart" in window;
+
+    if (prefersReduced || isTouchDevice.current) {
+      // Skip entrance on touch — content is immediately readable
       ENTRANCE_ELEMENTS.forEach((selector) => {
         const el = document.querySelector(selector) as HTMLElement | null;
         if (!el) return;
@@ -105,76 +138,112 @@ export default function Hero() {
     });
   }, []);
 
-  /* ── Unified rAF parallax loop ─────────────────────────── */
+  /* ── Unified rAF parallax + physics loop ─────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const prefersReduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
     const clamp = (v: number, min: number, max: number) =>
       Math.max(min, Math.min(max, v));
 
-    /* Mouse tracking */
+    const isTouch = isTouchDevice.current;
+
+    /* Mouse tracking — desktop */
     const onMove = (e: PointerEvent) => {
       mouseRef.current.x = clamp((e.clientX / window.innerWidth) * 2 - 1, -1, 1);
       mouseRef.current.y = clamp((e.clientY / window.innerHeight) * 2 - 1, -1, 1);
+      slabPhysRef.current.active = true;
     };
     const onLeave = () => {
       mouseRef.current.x = 0;
       mouseRef.current.y = 0;
+      slabPhysRef.current.active = false;
     };
 
-    window.addEventListener("pointermove", onMove, { passive: true });
-    window.addEventListener("pointerleave", onLeave);
-    window.addEventListener("blur", onLeave);
-
-    /* Scroll tracking */
-    const onScroll = () => {
-      scrollYRef.current = window.scrollY;
+    /* Touch tracking — mobile */
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      const touch = e.touches[0];
+      mouseRef.current.x = clamp((touch.clientX / window.innerWidth) * 2 - 1, -1, 1);
+      mouseRef.current.y = clamp((touch.clientY / window.innerHeight) * 2 - 1, -1, 1);
+      slabPhysRef.current.active = true;
     };
+    const onTouchEnd = () => {
+      mouseRef.current.x = 0;
+      mouseRef.current.y = 0;
+      slabPhysRef.current.active = false;
+    };
+
+    if (isTouch) {
+      window.addEventListener("touchmove", onTouchMove, { passive: true });
+      window.addEventListener("touchend", onTouchEnd, { passive: true });
+    } else {
+      window.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointerleave", onLeave);
+      window.addEventListener("blur", onLeave);
+    }
+
+    const onScroll = () => { scrollYRef.current = window.scrollY; };
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    /* RAF loop — all parallax driven here, one place */
+    /* ── RAF loop ─────────────────────────────────────── */
     const tick = () => {
-      /* Mouse lerp */
       const t = 0.055;
       currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
       currentRef.current.y = lerp(currentRef.current.y, mouseRef.current.y, t);
       const mx = currentRef.current.x;
       const my = currentRef.current.y;
 
-      /* Scroll lerp */
-      scrollLerpedRef.current = lerp(
-        scrollLerpedRef.current,
-        scrollYRef.current,
-        SLAB_SCROLL_LERP
+      const maxScroll = Math.max(
+        document.documentElement.scrollHeight - window.innerHeight,
+        1
       );
-      const sy = scrollLerpedRef.current;
+      scrollProgressRef.current = clamp(
+        scrollYRef.current / maxScroll,
+        0,
+        1
+      );
+      scrollStageRef.current = getScrollStage(scrollProgressRef.current);
+      sceneStateRef.current.scrollProgress = scrollProgressRef.current;
+      sceneStateRef.current.stageIndex = getStageIndex(scrollStageRef.current.stage);
+      sceneStateRef.current.stageProgress = scrollStageRef.current.stageProgress;
 
-      /* Background parallax */
-      if (bgRef.current) {
-        bgRef.current.style.transform = `translate3d(${mx * BG_TX}px, ${my * BG_TY}px, 0)`;
-      }
+      /* ── Mouse target — drives WebGL mesh rotation via spring physics in SlabMesh ── */
+      /* Hero.tsx writes target every frame (window-level pointermove, no blind spot).
+         SlabMesh.useFrame reads target and runs spring physics independently.
+         Separation of concerns: Hero writes target → SlabMesh computes physics.
+         No double-write of p.pos/p.vel in two places. */
+      const p = slabPhysRef.current;
+      p.target.x = mx * 0.22;
+      p.target.y = my * 0.14 + PHYS_REST_Y;
+      /* p.active is maintained by onMove/onLeave (window-level events) */
 
-      /* Title extremely subtle counter-parallax */
+      /* ── DOM-level parallax: title ──────── */
       if (titleRef.current) {
-        titleRef.current.style.transform = `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
+        if (isTouch) {
+          titleRef.current.style.transform = `translate3d(0px, 0px, 0px)`;
+        } else {
+          titleRef.current.style.transform =
+            `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
+        }
       }
 
-      /* WebGL slab — scroll-driven Y + counter-rotate
-         Applied via the container ref; pointer tilt lives inside WebGLSlab */
+      /* ── DOM-level scroll parallax: slab wrapper ──────── */
       if (slabRef.current) {
-        /* Normalized scroll: 0 at top, 1 at one viewport scroll */
+        scrollLerpedRef.current = lerp(
+          scrollLerpedRef.current,
+          scrollYRef.current,
+          SLAB_SCROLL_LERP
+        );
+        const sy = scrollLerpedRef.current;
         const norm = sy / Math.max(window.innerHeight, 1);
         const slabY = norm * SLAB_MAX_Y;
-        /* Counter-rotateX: slab tilts backward as user scrolls down */
         const rotX = -norm * SLAB_COUNTER_ROTATE_X;
-        /* Counter-rotateY: slight yaw opposite to mouse x */
         const rotY = mx * 0.008 - norm * SLAB_COUNTER_ROTATE_Y;
 
-        slabRef.current.style.transform = `translate3d(0px, ${slabY}px, 0px) rotateX(${rotX}rad) rotateY(${rotY}rad)`;
+        slabRef.current.style.transform =
+          `translate3d(0px, ${slabY}px, 0px) rotateX(${rotX}rad) rotateY(${rotY}rad)`;
       }
 
       rafRef.current = requestAnimationFrame(tick);
@@ -187,6 +256,8 @@ export default function Hero() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("blur", onLeave);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
@@ -194,46 +265,15 @@ export default function Hero() {
   return (
     <main
       id="hero"
-      aria-label="Spatial interfaces for agentic systems"
-      className="relative min-h-[100dvh] overflow-hidden"
+      aria-label="Recursive intelligence homepage"
+      className="relative min-h-[500svh] overflow-x-hidden"
       style={{
-        perspective: "1600px",
-        perspectiveOrigin: "50% 36%",
         isolation: "isolate",
       }}
     >
-      {/* ── Deep space background ──────────────────────── */}
-      <div
-        ref={bgRef}
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 60% at 50% 40%, #0F1219 0%, #080A10 100%)",
-        }}
-      />
+      {/* (VoidField3D now lives inside WebGLSlab — see /components/WebGLSlab.tsx) */}
 
-      {/* ── Subtle depth grid ──────────────────────────── */}
-      <div className="absolute inset-0 pointer-events-none z-0 grid-overlay" />
-
-      {/* ── Atmospheric radial glow ────────────────────── */}
-      <div
-        className="absolute pointer-events-none z-[4]"
-        style={{
-          top: "0",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "70vw",
-          height: "80vh",
-          background:
-            "radial-gradient(ellipse 50% 40% at 50% 48%, rgba(40, 100, 180, 0.07) 0%, transparent 70%)",
-        }}
-        aria-hidden="true"
-      />
-
-      {/* ── Void particle field ─────────────────────────── */}
-      <VoidField />
-
-      {/* ── Brand (top-left) — fixed, zero parallax ───── */}
+      {/* ── Brand (top-left) ──────────────────────────── */}
       <header
         className="brand absolute z-10 select-none"
         style={{
@@ -262,15 +302,12 @@ export default function Hero() {
             style={{ background: "rgba(237, 233, 227, 0.5)" }}
           />
         </span>
-        <span
-          className="ml-[10px]"
-          style={{ color: "#EDE9E3", fontStyle: "normal" }}
-        >
+        <span className="ml-[10px]" style={{ color: "#EDE9E3", fontStyle: "normal" }}>
           Spatial
         </span>
       </header>
 
-      {/* ── Meta (top-right) — fixed, zero parallax ────── */}
+      {/* ── Meta (top-right) ──────────────────────────── */}
       <div
         className="meta absolute z-10 select-none"
         aria-hidden="true"
@@ -300,101 +337,30 @@ export default function Hero() {
         <span>11° 04′ N</span>
       </div>
 
-      {/* ── WebGL architectural slab — scroll parallax + pointer tilt */}
-      {/* z-index 5, behind copy (z-20) */}
-      <div ref={slabRef} className="absolute inset-0 z-[5]">
-        <WebGLSlab />
+      {/* ── WebGL architectural slab ───────────────── */}
+      {/* slabRef wraps the WebGL div for scroll-driven CSS parallax.
+          slabPhysRef is passed into WebGLSlab so Hero.tsx's RAF loop
+          can update the physics state directly — no event-blind-spot. */}
+      <div
+        ref={slabRef}
+        className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
+      >
+        <WebGLSlab physRef={slabPhysRef} sceneStateRef={sceneStateRef} />
       </div>
 
-      {/* ── Editorial copy — NO parallax on any text layer ─── */}
-      <section
-        className="hero-copy absolute left-1/2 z-20 text-center"
-        style={{
-          top: "15vh",
-          transform: "translateX(-50%)",
-          maxWidth: "640px",
-          width: "100%",
-          padding: "0 40px",
-        }}
-      >
-        {/* Eyebrow — ZERO parallax */}
-        <p
-          className="eyebrow mb-6 inline-flex items-center"
-          style={{
-            gap: "16px",
-            fontSize: "10px",
-            letterSpacing: "0.36em",
-            textTransform: "uppercase",
-            color: "rgba(237, 233, 227, 0.58)",
-            fontFamily: "Georgia, serif",
-            fontStyle: "italic",
-            transformStyle: "preserve-3d",
-          }}
-        >
-          <span
-            style={{
-              width: "28px",
-              height: "1px",
-              background: "rgba(237, 233, 227, 0.22)",
-              display: "inline-block",
-              flexShrink: 0,
-            }}
+      {/* ── Recursive narrative copy ───────────────────── */}
+      <div className="relative z-20">
+        {homepageSections.map((section, index) => (
+          <NarrativeSection
+            key={section.stage}
+            section={section}
+            isIntro={index === 0}
+            titleRef={index === 0 ? titleRef : undefined}
           />
-          <span>Agentic Infrastructure</span>
-        </p>
+        ))}
+      </div>
 
-        {/* Title — extremely subtle counter-parallax */}
-        <h1
-          ref={titleRef}
-          className="title mb-5"
-          style={{
-            fontSize: "clamp(36px, 6vw, 64px)",
-            lineHeight: 1.12,
-            letterSpacing: "-0.015em",
-            fontFamily: "Georgia, serif",
-            fontWeight: 400,
-            color: "#EDE9E3",
-            transformStyle: "preserve-3d",
-          }}
-        >
-          Spatial interfaces
-          <br />
-          <em>for agentic systems.</em>
-        </h1>
-
-        {/* Subtitle — ZERO parallax */}
-        <p
-          className="subtitle mb-8"
-          style={{
-            fontSize: "15px",
-            lineHeight: 1.65,
-            letterSpacing: "0.01em",
-            color: "rgba(237, 233, 227, 0.52)",
-            fontFamily: "Georgia, serif",
-            fontStyle: "italic",
-            transformStyle: "preserve-3d",
-          }}
-        >
-          A quiet control plane for observing, composing,
-          <br />
-          and scaling AI workflows.
-        </p>
-
-        {/* CTA — pure CSS hover/active, ZERO parallax */}
-        <div className="cta-row">
-          <a
-            href="#"
-            className="cta-link group inline-flex items-center gap-3"
-          >
-            <span className="cta-label">Enter preview</span>
-            <span className="cta-arrow" aria-hidden="true">
-              →
-            </span>
-          </a>
-        </div>
-      </section>
-
-      {/* ── Noscript fallback ──────────────────────────── */}
+      {/* ── Noscript fallback ─────────────────────────── */}
       <noscript>
         <p
           style={{

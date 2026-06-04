@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: clip;
+  background: #05060A;
+}
+
+body {
+  scrollbar-gutter: stable;
+}
+
 /* ============================================================
    Static 2.5D Hero — Obsidian Spike Pyramid Edition
    Tailwind v4: theme configured via @theme directive
@@ -79,7 +92,7 @@
   font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(237, 233, 227, 0.75); /* WCAG AA 4.66:1 on #05060A */
+  color: rgba(237, 233, 227, 0.75);
   text-decoration: none;
   transition:
     color 0.35s cubic-bezier(0.28, 0.72, 0.18, 1),
@@ -113,6 +126,161 @@
 /* ── Eyebrow — descender clearance for italic Georgia ─────── */
 .eyebrow {
   line-height: 1.6;
-  /* leading-[1.1] min + pb reserve for italic descenders (y g j p q) */
   padding-bottom: 2px;
+}
+
+/* ── Recursive homepage narrative sections ─────────────── */
+.narrative-section {
+  pointer-events: none;
+}
+
+.narrative-section-inner {
+  transform: translate3d(0, 0, 0);
+}
+
+.narrative-kicker {
+  color: rgba(237, 233, 227, 0.38);
+  font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
+  font-size: 10px;
+  font-style: italic;
+  letter-spacing: 0.28em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+.narrative-title {
+  color: #EDE9E3;
+  font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
+  font-size: clamp(34px, 5vw, 64px);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.narrative-body {
+  color: rgba(237, 233, 227, 0.56);
+  font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
+  font-size: 15px;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  line-height: 1.7;
+  margin: 24px auto 0;
+  max-width: 620px;
+  text-wrap: pretty;
+}
+
+.narrative-section .cta-link {
+  pointer-events: auto;
+}
+
+/* ── Mobile — 768px and below ────────────────────────────── */
+@media (max-width: 768px) {
+  /* Brand: reposition from absolute to flow-safe static */
+  .brand {
+    top: 20px !important;
+    left: 20px !important;
+  }
+
+  .meta {
+    top: 20px !important;
+    right: 20px !important;
+  }
+
+  /* Hero copy: reduce vertical offset, tighten padding */
+  .hero-copy {
+    top: 12vh !important;
+    padding: 0 24px !important;
+  }
+
+  /* Title: reduce clamp — smaller on mobile */
+  .title {
+    font-size: clamp(28px, 8vw, 48px) !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  /* Subtitle: slightly smaller on mobile */
+  .subtitle {
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+  }
+
+  .narrative-title {
+    font-size: clamp(28px, 8vw, 46px);
+  }
+
+  .narrative-body {
+    font-size: 13px;
+  }
+
+  /* CTA: larger touch target */
+  .cta-link {
+    padding: 16px 28px 16px 30px !important;
+    font-size: 11px !important;
+    letter-spacing: 0.2em !important;
+  }
+
+  /* Disable pointer parallax on touch — touchmove handled separately */
+  .parallax-enabled .title {
+    /* parallax still off for title per design spec */
+  }
+}
+
+/* ── Very small screens — 400px and below ─────────────── */
+@media (max-width: 400px) {
+  .hero-copy {
+    top: 10vh !important;
+    padding: 0 16px !important;
+  }
+
+  .title {
+    font-size: clamp(24px, 9vw, 36px) !important;
+  }
+}
+
+/* ── Touch device global overrides ─────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable entrance animations on touch — they feel laggy */
+  .brand,
+  .meta,
+  .eyebrow,
+  .title,
+  .subtitle,
+  .cta-row {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    transition: none !important;
+  }
+
+  /* Reduce DPR to save battery on mobile */
+  canvas {
+    max-resolution: 1dppx !important;
+  }
+}
+
+/* ── Landscape mobile: shift layout ────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hero-copy {
+    top: 6vh !important;
+  }
+
+  .title {
+    font-size: clamp(22px, 6vw, 36px) !important;
+    margin-bottom: 8px !important;
+  }
+
+  .subtitle {
+    display: none !important;
+  }
+}
+
+/* ── Reduced motion keeps the narrative readable ───────── */
+@media (prefers-reduced-motion: reduce) {
+  .narrative-section,
+  .narrative-section-inner,
+  .narrative-title,
+  .narrative-body {
+    transform: none !important;
+    transition: none !important;
+  }
 }

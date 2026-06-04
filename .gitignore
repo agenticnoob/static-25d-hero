@@ -16,6 +16,9 @@ out
 # Dependencies
 node_modules/
 
+# TypeScript
+*.tsbuildinfo
+
 # Vite cache
 .vite/
 *.local

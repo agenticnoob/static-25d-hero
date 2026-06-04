@@ -30,6 +30,7 @@ export interface SceneState {
   scrollProgress: number;
   stageIndex: number;
   stageProgress: number;
+  slabDropPx: number;
 }
 
 export function clamp01(value: number): number {

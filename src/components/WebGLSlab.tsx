@@ -41,21 +41,21 @@ const bgFrag = /* glsl */ `
     float aspect = 80.0 / 60.0;           /* ellipse rx/ry ratio */
     vec2  toC    = (vUv - center) * vec2(1.0, aspect);
     float ed     = length(toC) / length(vec2(0.5, 0.5 * aspect));
-    vec3  deep   = vec3(0.055, 0.055, 0.058); /* #0E0E0E — darkest */
-    vec3  mid    = vec3(0.102, 0.102, 0.106); /* #1A1A1B — mid dark gray */
-    vec3  col    = mix(mid, deep, clamp(ed * 1.2, 0.0, 1.0));
+    vec3  deep   = vec3(0.082, 0.082, 0.088); /* #151516 — darkest */
+    vec3  mid    = vec3(0.145, 0.145, 0.154); /* #252527 — mid dark gray */
+    vec3  col    = mix(mid, deep, clamp(ed * 1.14, 0.0, 1.0));
 
     /* ── 64px grid with radial mask — neutral white, low opacity */
     float g = grid(vUv, 1.0 / 12.5);
     float mask = 1.0 - smoothstep(0.0, 0.8, length(vUv - vec2(0.5, 0.5)));
-    col += vec3(0.42, 0.42, 0.44) * g * mask * 0.015;
+    col += vec3(0.50, 0.50, 0.52) * g * mask * 0.020;
 
     /* ── Atmospheric glow — neutral gray, very subtle (was blue) */
     vec2  gCenter = vec2(0.5, 0.48);
     vec2  gToC    = (vUv - gCenter) * vec2(1.0, 1.0 / 0.8);
     float gd      = length(gToC) / 0.5;
-    float glow    = max(0.0, 1.0 - gd) * 0.05;
-    col += vec3(0.18, 0.18, 0.20) * glow;
+    float glow    = max(0.0, 1.0 - gd) * 0.065;
+    col += vec3(0.24, 0.24, 0.26) * glow;
 
     gl_FragColor = vec4(col, 1.0);
   }
@@ -381,16 +381,28 @@ function BgQuad() {
 
 const GROUND_UNIFORMS = { uTime: { value: 0 } };
 
-function GroundPlane() {
+interface GroundPlaneProps {
+  sceneStateRef: React.MutableRefObject<SceneState>;
+}
+
+function GroundPlane({ sceneStateRef }: GroundPlaneProps) {
+  const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.ShaderMaterial>(null);
+  const { viewport } = useThree();
+  const baseY = -1.4;
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     if (matRef.current) matRef.current.uniforms.uTime.value = t;
+    if (meshRef.current) {
+      const dropWorld =
+        sceneStateRef.current.slabDropPx * (viewport.height / Math.max(window.innerHeight, 1));
+      meshRef.current.position.y = baseY - dropWorld;
+    }
   });
 
   return (
-    <mesh position={[0, -1.4, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh ref={meshRef} position={[0, baseY, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <planeGeometry args={[16, 10]} />
       <shaderMaterial
         ref={matRef}
@@ -461,6 +473,9 @@ function SlabMesh({
     p.pos.y = Math.max(-0.55, Math.min(0.88, p.pos.y));
 
     if (slabRef.current) {
+      const dropWorld =
+        sceneStateRef.current.slabDropPx * (viewport.height / Math.max(window.innerHeight, 1));
+      slabRef.current.position.y = slabY - dropWorld;
       slabRef.current.rotation.x = p.pos.y;
       slabRef.current.rotation.y = p.pos.x;
     }
@@ -579,7 +594,7 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
           sceneStateRef={sceneStateRef}
           invalidateRef={invalidateRef}
         />
-        <GroundPlane />
+        <GroundPlane sceneStateRef={sceneStateRef} />
       </Canvas>
     </div>
   );

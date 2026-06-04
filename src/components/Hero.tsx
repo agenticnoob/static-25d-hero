@@ -34,7 +34,7 @@ const ENTRANCE_DELAYS: Record<string, number> = {
    ─────────────────────────────────────────────────────────────────
    Desktop:
      Background  : 0.8px / 0.6px  — low amplitude, mouse-driven
-     WebGL slab  : CSS scroll parallax (translateY + rotateX/rotateY via slabRef)
+     WebGL slab  : R3F scroll parallax (sceneStateRef.slabDropPx)
                    + physics rotation via physRef (also mouse-driven)
      Title       : -0.3px / -0.2px — subtle counter-parallax, mouse-driven
      Eyebrow / Subtitle / CTA: ZERO parallax (text must stay legible)
@@ -48,9 +48,8 @@ const TITLE_TY   = -0.2;
 
 /* Scroll → slab CSS parallax */
 const SLAB_SCROLL_LERP   = 0.06;
-const SLAB_MAX_Y         = 55;
-const SLAB_COUNTER_ROTATE_X = 0.025;
-const SLAB_COUNTER_ROTATE_Y = 0.015;
+const SLAB_MAX_Y_DESKTOP = 72;
+const SLAB_MAX_Y_TOUCH   = 54;
 
 /* Mouse → WebGL physics (physRef) */
 const PHYS_SPRING  = 0.045;
@@ -68,7 +67,6 @@ function lerp(a: number, b: number, t: number): number {
 export default function Hero() {
   /* ── Refs ─────────────────────────────────────────────── */
   const titleRef  = useRef<HTMLHeadingElement>(null);
-  const slabRef   = useRef<HTMLDivElement>(null);
   const sectionsRef = useRef<HTMLElement[]>([]);
   const slabPhysRef = useRef<{
     pos:    THREE.Vector2;
@@ -90,6 +88,7 @@ export default function Hero() {
     scrollProgress: 0,
     stageIndex: 0,
     stageProgress: 0,
+    slabDropPx: 0,
   });
 
   const mouseRef   = useRef({ x: 0, y: 0 });
@@ -251,22 +250,17 @@ export default function Hero() {
         }
       }
 
-      /* ── DOM-level scroll parallax: slab wrapper ──────── */
-      if (slabRef.current) {
-        scrollLerpedRef.current = lerp(
-          scrollLerpedRef.current,
-          scrollYRef.current,
-          SLAB_SCROLL_LERP
-        );
-        const sy = scrollLerpedRef.current;
-        const norm = sy / Math.max(window.innerHeight, 1);
-        const slabY = norm * SLAB_MAX_Y;
-        const rotX = -norm * SLAB_COUNTER_ROTATE_X;
-        const rotY = mx * 0.008 - norm * SLAB_COUNTER_ROTATE_Y;
-
-        slabRef.current.style.transform =
-          `translate3d(0px, ${slabY}px, 0px) rotateX(${rotX}rad) rotateY(${rotY}rad)`;
-      }
+      /* ── Scroll parallax: keep the fixed canvas wrapper still.
+         The R3F scene reads this pixel offset and moves only the slab/ground. */
+      scrollLerpedRef.current = lerp(
+        scrollLerpedRef.current,
+        scrollYRef.current,
+        SLAB_SCROLL_LERP
+      );
+      const sy = scrollLerpedRef.current;
+      const norm = sy / Math.max(window.innerHeight, 1);
+      sceneStateRef.current.slabDropPx =
+        norm * (isTouch ? SLAB_MAX_Y_TOUCH : SLAB_MAX_Y_DESKTOP);
 
       rafRef.current = requestAnimationFrame(tick);
     };
@@ -364,7 +358,6 @@ export default function Hero() {
           slabPhysRef is passed into WebGLSlab so Hero.tsx's RAF loop
           can update the physics state directly — no event-blind-spot. */}
       <div
-        ref={slabRef}
         className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
       >
         <WebGLSlab physRef={slabPhysRef} sceneStateRef={sceneStateRef} />

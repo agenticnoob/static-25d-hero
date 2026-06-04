@@ -69,6 +69,7 @@ export default function Hero() {
   /* ── Refs ─────────────────────────────────────────────── */
   const titleRef  = useRef<HTMLHeadingElement>(null);
   const slabRef   = useRef<HTMLDivElement>(null);
+  const sectionsRef = useRef<HTMLElement[]>([]);
   const slabPhysRef = useRef<{
     pos:    THREE.Vector2;
     vel:    THREE.Vector2;
@@ -148,6 +149,9 @@ export default function Hero() {
       Math.max(min, Math.min(max, v));
 
     const isTouch = isTouchDevice.current;
+    sectionsRef.current = Array.from(
+      document.querySelectorAll<HTMLElement>(".narrative-section")
+    );
 
     /* Mouse tracking — desktop */
     const onMove = (e: PointerEvent) => {
@@ -208,6 +212,24 @@ export default function Hero() {
       sceneStateRef.current.scrollProgress = scrollProgressRef.current;
       sceneStateRef.current.stageIndex = getStageIndex(scrollStageRef.current.stage);
       sceneStateRef.current.stageProgress = scrollStageRef.current.stageProgress;
+
+      const viewportProgress = scrollYRef.current / Math.max(window.innerHeight, 1);
+      sectionsRef.current.forEach((section, index) => {
+        const distance = viewportProgress - index;
+        const presence = clamp(1 - Math.abs(distance), 0, 1);
+        const direction = distance < 0 ? 1 : -1;
+        const inner = section.querySelector<HTMLElement>(".narrative-section-inner");
+
+        section.dataset.active = presence >= 0.5 ? "true" : "false";
+
+        if (inner) {
+          const quiet = 1 - presence;
+          inner.style.opacity = (0.18 + presence * 0.82).toFixed(3);
+          inner.style.filter = `blur(${(quiet * 1.6).toFixed(2)}px)`;
+          inner.style.transform =
+            `translate3d(0, ${((quiet * 28 * direction)).toFixed(2)}px, 0) scale(${(0.986 + presence * 0.014).toFixed(3)})`;
+        }
+      });
 
       /* ── Mouse target — drives WebGL mesh rotation via spring physics in SlabMesh ── */
       /* Hero.tsx writes target every frame (window-level pointermove, no blind spot).

@@ -108,6 +108,13 @@ const slabFrag = /* glsl */ `
     );
   }
 
+  float sdSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+    return length(pa - ba * h);
+  }
+
   void main() {
     vec3 col = vec3(0.056, 0.068, 0.090);
     col += noise(vUv * 40.0) * 0.015;
@@ -139,10 +146,39 @@ const slabFrag = /* glsl */ `
     col += vec3(0.10, 0.18, 0.28) * sheen;
 
     float stageDepth = smoothstep(0.0, 1.0, uScrollProgress);
-    float causalTrace = smoothstep(0.8, 1.6, uStageIndex + uStageProgress)
-                      * (1.0 - smoothstep(2.0, 2.8, uStageIndex + uStageProgress));
-    float traceLine = 1.0 - smoothstep(0.005, 0.018, abs(vUv.y - (0.24 + vUv.x * 0.35)));
-    col += vec3(0.18, 0.32, 0.46) * traceLine * causalTrace * 0.055;
+    float phase = uStageIndex + uStageProgress;
+    float causalTrace = smoothstep(0.75, 1.25, phase)
+                      * (1.0 - smoothstep(2.05, 2.65, phase));
+    float traceA = 1.0 - smoothstep(0.004, 0.018, sdSegment(vUv, vec2(0.16, 0.28), vec2(0.84, 0.58)));
+    float traceB = 1.0 - smoothstep(0.006, 0.024, sdSegment(vUv, vec2(0.25, 0.68), vec2(0.74, 0.34)));
+    col += vec3(0.18, 0.32, 0.46) * (traceA * 0.070 + traceB * 0.030) * causalTrace;
+
+    float recursion = smoothstep(1.85, 2.25, phase)
+                    * (1.0 - smoothstep(3.10, 3.55, phase));
+    vec2 loopUv = (vUv - vec2(0.5)) * vec2(1.0, 1.55);
+    float loopRadius = length(loopUv);
+    float loopAngle = atan(loopUv.y, loopUv.x);
+    float loopWave = sin(loopAngle * 3.0 + uTime * 0.42) * 0.012;
+    float loopLine = 1.0 - smoothstep(0.006, 0.025, abs(loopRadius - (0.285 + loopWave)));
+    float loopGap = smoothstep(-0.15, 0.5, sin(loopAngle + uTime * 0.24));
+    col += vec3(0.16, 0.34, 0.48) * loopLine * loopGap * recursion * 0.070;
+
+    float rebuild = smoothstep(3.55, 4.05, phase);
+    vec2 n1 = vec2(0.24, 0.28);
+    vec2 n2 = vec2(0.38, 0.62);
+    vec2 n3 = vec2(0.63, 0.42);
+    vec2 n4 = vec2(0.78, 0.70);
+    float network =
+      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n1, n2))) +
+      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n2, n3))) +
+      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n3, n4)));
+    float nodes =
+      (1.0 - smoothstep(0.010, 0.032, length(vUv - n1))) +
+      (1.0 - smoothstep(0.010, 0.032, length(vUv - n2))) +
+      (1.0 - smoothstep(0.010, 0.032, length(vUv - n3))) +
+      (1.0 - smoothstep(0.010, 0.032, length(vUv - n4)));
+    col += vec3(0.20, 0.36, 0.42) * network * rebuild * 0.035;
+    col += vec3(0.34, 0.48, 0.46) * nodes * rebuild * 0.055;
     col *= 1.0 - stageDepth * 0.045;
 
     gl_FragColor = vec4(col, 1.0);
@@ -502,6 +538,7 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
 
   return (
     <div
+      className="webgl-stage"
       style={{
         position: "absolute",
         inset: 0,

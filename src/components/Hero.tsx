@@ -27,6 +27,9 @@ const ENTRANCE_ELEMENTS = [
   ".cta-row",
 ] as const;
 
+const EASE_QUIET = "cubic-bezier(0.28, 0.72, 0.18, 1)" as const;
+const TRANSITION_DURATION = "0.9s";
+
 const ENTRANCE_DELAYS: Record<string, number> = {
   ".brand": 0.1,
   ".meta": 0.18,
@@ -38,11 +41,24 @@ const ENTRANCE_DELAYS: Record<string, number> = {
 
 const TITLE_TX = -0.3;
 const TITLE_TY = -0.2;
+const POINTER_SCALE = {
+  x: 0.22,
+  y: 0.14,
+};
 
 const SCROLL_FOLLOW = 0.085;
 const SCROLL_VELOCITY_DAMPING = 0.82;
 const SCROLL_VELOCITY_LIMIT = 1.35;
 const PHYS_REST_Y = 0.18;
+const TICK_EASE = 0.055;
+const SCROLL_VELOCITY_RESPONSE = 0.22;
+
+const WARP_STAGE = {
+  enter: 0.16,
+  start: 0.34,
+  exit: 0.66,
+  vanish: 0.86,
+};
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -63,6 +79,13 @@ function scheduleFrame(callback: FrameRequestCallback): number {
   }
 
   return window.setTimeout(() => callback(Date.now()), 16);
+}
+
+function readPointerFromViewport(event: Pick<PointerEvent, "clientX" | "clientY">) {
+  const { innerWidth, innerHeight } = window;
+  const x = clamp((event.clientX / Math.max(innerWidth, 1)) * 2 - 1, -1, 1);
+  const y = clamp((event.clientY / Math.max(innerHeight, 1)) * 2 - 1, -1, 1);
+  return { x, y };
 }
 
 function cancelFrame(id: number) {
@@ -103,8 +126,6 @@ export default function Hero() {
     scrollVelocity: 0,
   });
 
-  const scrollYRef = useRef(0);
-  const scrollProgressRef = useRef(0);
   const scrollVisualProgressRef = useRef(0);
   const scrollVelocityRef = useRef(0);
 
@@ -113,7 +134,6 @@ export default function Hero() {
   const isTouchDevice = useRef(false);
 
   const rafRef = useRef(0);
-  const lastFrameAtRef = useRef(0);
 
   const setPointerTarget = useHeroStore((state) => state.setPointerTarget);
   const setPointerCurrent = useHeroStore((state) => state.setPointerCurrent);
@@ -152,7 +172,7 @@ export default function Hero() {
       el.style.opacity = "0";
       el.style.transform = "translateY(20px)";
       el.style.transition =
-        "opacity 0.9s cubic-bezier(0.28, 0.72, 0.18, 1), transform 0.9s cubic-bezier(0.28, 0.72, 0.18, 1)";
+        `opacity ${TRANSITION_DURATION} ${EASE_QUIET}, transform ${TRANSITION_DURATION} ${EASE_QUIET}`;
       el.style.transitionDelay = `${delay}s`;
       scheduleFrame(() => {
         scheduleFrame(() => {
@@ -189,8 +209,9 @@ export default function Hero() {
     const clamp01 = (value: number) => clamp(value, 0, 1);
 
     const onPointerMove = (event: PointerEvent) => {
-      mouseRef.current.x = clamp((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
-      mouseRef.current.y = clamp((event.clientY / window.innerHeight) * 2 - 1, -1, 1);
+      const nextPointer = readPointerFromViewport(event);
+      mouseRef.current.x = nextPointer.x;
+      mouseRef.current.y = nextPointer.y;
       slabPhysRef.current.active = true;
       setPointerActive(true);
       setPointerTarget(mouseRef.current);
@@ -207,8 +228,9 @@ export default function Hero() {
     const onTouchMove = (event: TouchEvent) => {
       if (event.touches.length === 0) return;
       const touch = event.touches[0];
-      mouseRef.current.x = clamp((touch.clientX / window.innerWidth) * 2 - 1, -1, 1);
-      mouseRef.current.y = clamp((touch.clientY / window.innerHeight) * 2 - 1, -1, 1);
+      const nextPointer = readPointerFromViewport(touch);
+      mouseRef.current.x = nextPointer.x;
+      mouseRef.current.y = nextPointer.y;
       slabPhysRef.current.active = true;
       setPointerActive(true);
       setPointerTarget(mouseRef.current);
@@ -239,8 +261,8 @@ export default function Hero() {
         const rect = section.getBoundingClientRect();
         const travel = Math.max(rect.height + viewportH, 1);
         const sectionProgress = clamp((viewportH - rect.top) / travel, 0, 1);
-        const enter = smoothstep(0.16, 0.34, sectionProgress);
-        const exit = 1 - smoothstep(0.66, 0.86, sectionProgress);
+        const enter = smoothstep(WARP_STAGE.enter, WARP_STAGE.start, sectionProgress);
+        const exit = 1 - smoothstep(WARP_STAGE.exit, WARP_STAGE.vanish, sectionProgress);
         const presence = enter * exit;
         const direction = sectionProgress < 0.5 ? 1 : -1;
         const inner = section.querySelector<HTMLElement>(".narrative-section-inner");
@@ -270,34 +292,30 @@ export default function Hero() {
       const nextVelocity = lerp(
         scrollVelocityRef.current * SCROLL_VELOCITY_DAMPING,
         rawVelocity,
-        0.22
+        SCROLL_VELOCITY_RESPONSE
       );
 
-      scrollProgressRef.current = clampedRaw;
-      sceneStateRef.current = {
-        rawScrollProgress: clampedRaw,
-        scrollProgress: nextVisual,
-        stageIndex: getStageIndex(cinematic.stage),
-        stageProgress: cinematic.stageProgress,
-        scrollVelocity: prefersReduced ? 0 : nextVelocity,
-      };
-      scrollVelocityRef.current = clamp(
+      const stageIndex = getStageIndex(cinematic.stage);
+      const clampedVelocity = clamp(
         nextVelocity,
         -SCROLL_VELOCITY_LIMIT,
         SCROLL_VELOCITY_LIMIT
       );
-
-      setSceneState({
+      const nextSceneState = {
         rawScrollProgress: clampedRaw,
         scrollProgress: nextVisual,
-        stageIndex: getStageIndex(cinematic.stage),
+        stageIndex,
         stageProgress: cinematic.stageProgress,
-        scrollVelocity: prefersReduced ? 0 : scrollVelocityRef.current,
-      });
+        scrollVelocity: prefersReduced ? 0 : clampedVelocity,
+      };
+      scrollVelocityRef.current = clampedVelocity;
+
+      sceneStateRef.current = nextSceneState;
+      setSceneState(nextSceneState);
       setSceneMode(cinematic.stage);
 
       if (isTouchDevice.current && sectionsRef.current.length > 0) {
-        const index = Math.round(cinematic.stageProgress + getStageIndex(cinematic.stage));
+        const index = Math.round(cinematic.stageProgress + stageIndex);
         if (index >= 0 && index < homepageSections.length) {
           setSceneMode(homepageSections[index].stage);
         }
@@ -345,7 +363,6 @@ export default function Hero() {
 
     const handleLenis = (event: { scroll: number; velocity?: number }) => {
       latestScroll = event.scroll;
-      scrollYRef.current = latestScroll;
       const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
       const raw = clamp(latestScroll / maxScroll, 0, 1);
       const velocity = clamp((event.velocity ?? 0) / 1200, -SCROLL_VELOCITY_LIMIT, SCROLL_VELOCITY_LIMIT);
@@ -396,10 +413,7 @@ export default function Hero() {
 
     const tick = (time: number) => {
       lenis.raf(time);
-      const previous = lastFrameAtRef.current || time;
-      const dt = clamp((time - previous) / 1000, 0.001, 0.05);
-      lastFrameAtRef.current = time;
-      const t = 0.055;
+      const t = TICK_EASE;
 
       currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
       currentRef.current.y = lerp(currentRef.current.y, mouseRef.current.y, t);
@@ -407,8 +421,8 @@ export default function Hero() {
       const my = prefersReduced ? 0 : currentRef.current.y;
 
       const p = slabPhysRef.current;
-      p.target.x = mx * 0.22;
-      p.target.y = PHYS_REST_Y + my * 0.14;
+      p.target.x = mx * POINTER_SCALE.x;
+      p.target.y = PHYS_REST_Y + my * POINTER_SCALE.y;
       setPointerCurrent(currentRef.current);
       if (titleRef.current && !isTouchDevice.current && !prefersReduced) {
         titleRef.current.style.transform = `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
@@ -417,7 +431,6 @@ export default function Hero() {
       }
 
       rafRef.current = scheduleFrame(tick);
-      void dt;
     };
 
     rafRef.current = scheduleFrame(tick);

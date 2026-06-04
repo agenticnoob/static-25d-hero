@@ -47,17 +47,17 @@ No UI kit. Tailwind v4 remains the design-system layer.
 
 ### Interaction stack status
 
-The implementation currently uses one custom interaction stack in `Hero.tsx` + `WebGLSlab.tsx` (rAF + mutable refs + stage mapping). The libraries below are **not installed yet** and are only planned follow-up options.
+The implementation currently uses one custom interaction stack in `Hero.tsx` + `WebGLSlab.tsx` (rAF + mutable refs + stage mapping). `@react-three/rapier` is already integrated, while the items below are still planned follow-up options.
 
 | Package | Status | Intended role |
 |---------|--------|---------------|
-| `@react-three/rapier` | Planned | WebGL rigid bodies, collision, inertia, restrained physical settling |
+| `@react-three/rapier` | Implemented | WebGL rigid bodies, collision, inertia, restrained physical settling |
 | `lenis` | Planned | Smooth scroll source of truth, normalized wheel/touch momentum |
 | `gsap` + `ScrollTrigger` | Planned | Scroll timelines: pin, scrub, progress, section transitions |
 | `motion` | Planned | UI micro-interactions: entrance, hover, layout transitions |
 | `zustand` | Planned | Shared scroll/mouse/viewport/scene-mode state across DOM and R3F |
 
-Current code still uses a custom rAF loop and mutable refs for scroll and pointer state.
+Current code uses a custom rAF loop and mutable refs for scroll/pointer state. Rapier is already in use inside `WebGLSlab`.
 
 `InteractionState` in `src/lib/interaction.ts` describes the future shared source state shape. `SceneState` is the current WebGL render state passed from `Hero.tsx` to `WebGLSlab.tsx`; it stores damped scroll progress, stage index, eased stage progress, and scroll velocity.
 
@@ -85,10 +85,10 @@ There is one WebGL focal object: the slab. Its shader and pose are stage-aware:
 | Stage | HTML narrative | WebGL expression |
 |-------|----------------|------------------|
 | 观察 | Centered thesis | Baseline pose + inertia-driven sweep + slab ambient grid |
-| 因果 | 左侧重心 | `slabFrag` 中低对比 trace node 串联，`STAGE_POSES` 横向偏移 |
-| 递归 | 右侧重心 | `slabFrag` 中闭合环状光路（recursion loop）+ `STAGE_POSES` 的偏移与比例变化 |
-| 自指 | 中央收束 | `slabFrag` 中镜面线与偏置映射回声 + 轻微俯仰偏移 |
-| 重构 | 下左收束 | `slabFrag` 的重排节点网络 + `STAGE_POSES` 细微缩放和姿态重置 |
+| 因果 | 左侧重心 | `STAGE_POSES` 横向偏移 + 惯性/碰撞响应 |
+| 递归 | 右侧重心 | `STAGE_POSES` 偏移与比例变化 + 惯性/碰撞响应 |
+| 自指 | 中央收束 | 轻微俯仰偏移 + 惯性/碰撞响应 |
+| 重构 | 下左收束 | `STAGE_POSES` 细微缩放与姿态重置 + 惯性/碰撞响应 |
 
 The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narrative sections. Background and slab rendering live in one `WebGLSlab.tsx` scene (`BgQuad` + `SlabMesh`).
 
@@ -134,7 +134,7 @@ See `AGENTS.md` for:
 | Scroll stage model | `src/lib/interaction.ts` |
 | Slab physics constants | `src/components/WebGLSlab.tsx` → `PHYS` |
 | Stage-specific slab pose | `src/components/WebGLSlab.tsx` → `STAGE_POSES` |
-| Shader stage effects | `src/components/WebGLSlab.tsx` → `slabFrag` |
+| Shader effects | `src/components/WebGLSlab.tsx` → `slabFrag`（基于 `uInertia`、`uImpact`、`uMouse`） |
 
 ## Documentation status
 

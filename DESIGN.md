@@ -88,7 +88,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | z-4 | Atmospheric glow | 4 | Zero |
 | z-5 | WebGL slab / physics object | 5 | Stage pose + pointer tilt + restrained rigid-body response |
 | z-10 | Brand / Meta | 10 | Zero |
-| z-20 | Narrative copy / CTA | 20 | ScrollTrigger section state + Motion micro-interactions |
+| z-20 | Narrative copy / CTA | 20 | Scroll stage state + CSS state transitions |
 
 ### Spatial Composition
 
@@ -126,7 +126,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 ### Principles
 
 1. **Animation serves depth, not decoration.** Every motion should feel like physical consequence: inertia, gravity, friction, settling, or state transition.
-2. **No bounce, no elastic spectacle.** Rapier is a future optimization option, not part of the current implementation. If introduced, collision response must feel heavy and damped, not playful or game-like.
+2. **No bounce, no elastic spectacle.** Rapier now drives rigid-body collisions and inertia. Collision response must stay heavy and damped, never playful or game-like.
 3. **Scroll is the primary timeline.** The current implementation uses a custom rAF/ref loop. A future Lenis + GSAP ScrollTrigger migration may own smooth input, pin, scrub, progress, and section transitions.
 4. **UI micro-interactions stay restrained.** Current CTA hover/focus is pure CSS by constraint. Motion is a future UI layer only if the CTA event-handler constraint is deliberately revisited.
 5. **Parallax is ambient, not noisy.** It responds continuously to scroll and pointer position, but never makes body copy hard to read.
@@ -185,10 +185,10 @@ One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions
 ### Scene
 
 - **Camera:** `position [0, 2.0, 5.2]`, `fov 42` — narrow FOV for architectural feel
-- **Lighting:** Ambient `#1a2030` (cool dark blue), Directional from `[3,6,4]` with warm-white `#c8d8f0`, Point at `[0,-2,2]` with deep blue `#2040a0` for underside separation
+- **Lighting model:** Shader-driven material response in `slabFrag` (current scene does not add dedicated `AmbientLight`/`DirectionalLight` nodes).
 - **Background:** Transparent (alpha canvas)
 - **drei usage:** `@react-three/drei` is installed but currently unused. Prefer `Environment`, `ContactShadows`, camera helpers, and material utilities only when they improve depth or reduce boilerplate. Do not add helper effects that become a second focal point.
-- **Rapier usage:** Not implemented in the current version. If a future phase adds it, use fixed or kinematic guide bodies for invisible constraints, and one damped dynamic/kinematic rigid body for the slab where it improves inertia. Collisions should be subtle and architectural.
+- **Rapier usage:** Implemented. The room bounds and object are simulated with damped rigid-body response, fixed/kinematic guide walls, and collision settings tuned for quiet motion.
 
 ### Slab Mesh
 
@@ -204,11 +204,11 @@ One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions
   - Radial pulse glow (time-driven)
   - uMouse-driven sheen for pointer proximity
   - uInertia-driven observation sweep and material response
-  - Restrained vertex bending via `vWarp`, driven by scroll phase and stage gates
-  - Causality trace lines and low-contrast nodes
-  - Recursion loop light paths
-  - Self-reference mirror echo
-  - Reconstruction network re-layout
+  - Restrained vertex bending via `vWarp`, driven by time + inertia
+  - Trace lines and low-contrast nodes
+  - Loop light paths
+  - Mirror echo traces
+  - Network-like node texture
 
 ### Canvas Sizing Rule
 

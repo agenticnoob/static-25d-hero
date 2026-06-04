@@ -1,5 +1,7 @@
 # Recursive Intelligence Homepage Design
 
+> Historical design artifact. This English spec captured the first long-scroll homepage direction. The current implementation is Chinese and is documented by `README.md`, `DESIGN.md`, `docs/NEXT_STEPS.md`, and `docs/CODE_DOC_ALIGNMENT.md`. Keep this file for design lineage; do not treat its English copy examples as the current shipped page copy.
+
 ## Purpose
 
 Build a high-end personal homepage that expresses noobli's shift from traditional frontend engineering into AI-native interface thinking.
@@ -290,4 +292,3 @@ These can be decided during implementation:
 - Whether primary copy stays English-only or adds restrained Chinese notes.
 - Whether the recursion loop is a shader-only effect or a small line geometry.
 - Whether node interaction supports click-through project details in a later version.
-

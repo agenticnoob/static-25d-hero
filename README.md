@@ -40,7 +40,7 @@ static-25d-hero/
 | `@tailwindcss/postcss` | 4.3.0 | Tailwind v4 PostCSS integration |
 | `three` | 0.184.0 | Raw Three.js (geometry, materials, shaders) |
 | `@react-three/fiber` | 9.6.1 | React renderer for Three.js |
-| `@react-three/drei` | 10.7.7 | R3F helpers, planned for camera/material utilities |
+| `@react-three/drei` | 10.7.7 | Installed R3F helpers; currently unused by the active scene |
 | `typescript` | 5.9.3 | Strict type checking |
 
 No UI kit. Tailwind v4 remains the design-system layer.
@@ -59,12 +59,17 @@ The next optimization phase should add the interaction libraries below deliberat
 
 Current code still uses a custom rAF loop and mutable refs for scroll and pointer state. Do not document the planned stack as implemented until dependencies are installed and the architecture is migrated.
 
+`InteractionState` in `src/lib/interaction.ts` describes the future shared source state shape. `SceneState` is the current WebGL render state passed from `Hero.tsx` to `WebGLSlab.tsx`; it stores damped scroll progress, stage index, eased stage progress, and scroll velocity.
+
 ---
 
 ## Commands
 
 ```bash
 npm run dev      # Next.js dev server → http://localhost:3000
+npm test         # Node test runner → interaction helper regression tests
+npm run typecheck # TypeScript strict check
+npm run lint     # TypeScript static check; no separate ESLint config yet
 npm run build    # TypeScript check + static build → ./out/
 npm run start    # Serve the built output
 ```
@@ -139,3 +144,8 @@ See `AGENTS.md` for:
 | Slab physics constants | `src/components/WebGLSlab.tsx` → `PHYS` |
 | Stage-specific slab pose | `src/components/WebGLSlab.tsx` → `STAGE_POSES` |
 | Shader stage effects | `src/components/WebGLSlab.tsx` → `slabFrag` |
+
+## Documentation status
+
+- `docs/CODE_DOC_ALIGNMENT.md` is the current implementation alignment note for this iteration.
+- `docs/superpowers/specs/2026-06-04-recursive-intelligence-homepage-design.md` and `docs/superpowers/plans/2026-06-04-recursive-intelligence-homepage.md` are historical Superpowers artifacts from the first homepage conversion. They preserve design lineage, but the current source of truth is the shipped Chinese long-scroll implementation plus `README.md`, `DESIGN.md`, and `docs/NEXT_STEPS.md`.

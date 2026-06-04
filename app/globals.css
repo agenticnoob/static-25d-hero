@@ -120,6 +120,13 @@ body {
   box-shadow: 0 0 20px rgba(237, 233, 227, 0.08);
 }
 
+.cta-link:focus-visible {
+  color: #EDE9E3;
+  border-color: rgba(237, 233, 227, 0.56);
+  outline: 1px solid rgba(237, 233, 227, 0.72);
+  outline-offset: 5px;
+}
+
 .cta-link:active {
   transform: translateY(1px);
   color: rgba(237, 233, 227, 0.9);
@@ -252,14 +259,12 @@ body {
   opacity: 0;
   filter: blur(2px);
   transform: translate3d(0, 24px, 0) scale(0.986);
-  visibility: hidden;
 }
 
 .narrative-section[data-active="true"] .narrative-section-inner {
   opacity: 1;
   filter: blur(0);
   transform: translate3d(0, 0, 0) scale(1);
-  visibility: visible;
 }
 
 .narrative-kicker {
@@ -363,6 +368,12 @@ body {
     margin-right: auto;
     max-width: 620px;
     text-align: center;
+  }
+
+  .narrative-section--reconstruction .narrative-section-inner {
+    justify-content: flex-start;
+    padding-top: clamp(112px, 18svh, 148px);
+    padding-bottom: 0;
   }
 
   .narrative-section--causality .narrative-body,

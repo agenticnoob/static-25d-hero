@@ -309,6 +309,7 @@ interface SlabMeshProps {
   physRef: React.MutableRefObject<PhysicsState>;
   sceneStateRef: React.MutableRefObject<SceneState>;
   invalidateRef: React.MutableRefObject<() => void>;
+  prefersReducedMotion: boolean;
 }
 
 function SlabMesh({
@@ -316,6 +317,7 @@ function SlabMesh({
   physRef,
   sceneStateRef,
   invalidateRef,
+  prefersReducedMotion,
 }: SlabMeshProps) {
   const slabRef    = useRef<THREE.Mesh>(null);
   const slabMatRef = useRef<THREE.ShaderMaterial>(null);
@@ -371,7 +373,9 @@ function SlabMesh({
     /* uTime is always updated so the slab shader keeps animating */
     if (slabMatRef.current) {
       const scene = sceneStateRef.current;
-      slabMatRef.current.uniforms.uTime.value = clock.getElapsedTime();
+      slabMatRef.current.uniforms.uTime.value = prefersReducedMotion
+        ? 0
+        : clock.getElapsedTime();
       slabMatRef.current.uniforms.uScrollProgress.value = scene.scrollProgress;
       slabMatRef.current.uniforms.uStageIndex.value = scene.stageIndex;
       slabMatRef.current.uniforms.uStageProgress.value = scene.stageProgress;
@@ -436,6 +440,10 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
     (window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
      "ontouchstart" in window)
   );
+  const prefersReducedMotion = useRef(
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 
   const dpr: [number, number] = isTouch.current ? ([1, 1] as const) : ([1, 2] as const);
 
@@ -478,6 +486,7 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
           physRef={physRef}
           sceneStateRef={sceneStateRef}
           invalidateRef={invalidateRef}
+          prefersReducedMotion={prefersReducedMotion.current}
         />
       </Canvas>
     </div>

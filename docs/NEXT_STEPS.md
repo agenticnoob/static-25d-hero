@@ -21,34 +21,32 @@
 - 页面 metadata 已改为中文。
 - WebGL 层已修复视口尺寸、横向溢出和 slab 过大问题。
 - 文档已补充 `data/` 参考边界。
+- 已完成一轮桌面/移动端中文视觉 QA。
+- 移动端 reconstruction 阶段已避开 slab 高亮区域，正文和 CTA 保持在上三分之一。
+- 已补充 `npm test` 与 `npm run typecheck`，并加入 `src/lib/interaction.ts` 的阶段映射回归测试。
+- 已补充 `docs/CODE_DOC_ALIGNMENT.md`，并将旧英文 Superpowers spec/plan 标注为历史计划。
 
 ## 下一阶段任务
 
-1. **中文视觉 QA**
-   - 检查桌面、窄屏、移动端首屏。
-   - 确认中文标题不溢出、不压住 slab、不与顶部 meta 冲突。
-   - 确认只有一个纵向页面滚动条，没有横向滚动条。
-
-2. **叙事节奏优化**
+1. **叙事节奏优化**
    - 让非当前段落更安静地退场。
    - 每个视口只保留一个清晰观点。
    - 保持正文短句，不扩展成哲学长文。
 
-3. **WebGL 阶段表达**
+2. **WebGL 阶段表达**
    - 因果阶段：增强低对比 trace line。
    - 递归阶段：加入缓慢、克制的 loop 光路。
    - 重构阶段：加入少量节点重排，但不形成第二焦点。
 
-4. **移动端硬化**
+3. **移动端硬化**
    - 确认 DPR 为 `[1, 1]`。
    - 触屏设备禁用标题视差和入口动画。
    - 保证中文在 360px 宽度仍可读。
 
-5. **文档同步**
-   - 将 `README.md` 更新为当前长滚动中文主页架构。
-   - 将 `DESIGN.md` 补充已修复的 fixed containing block 与 Canvas sizing 注意事项。
-   - 将旧英文 spec/plan 归档或改写为中文版本。
+4. **文档同步**
+   - 保持 `README.md`、`DESIGN.md`、`docs/CODE_DOC_ALIGNMENT.md` 与当前实现一致。
+   - 后续如果迁移到 Zustand/Lenis/ScrollTrigger/Rapier/Motion，应同步把 planned 状态改为 implemented。
 
 ## 推荐执行顺序
 
-先做视觉 QA，再做叙事节奏，最后做 WebGL 阶段效果。不要先加复杂 shader 或节点物理；当前页面的第一优先级是中文表达、首屏比例和滚动稳定性。
+先做叙事节奏，再做 WebGL 阶段效果，最后继续移动端硬化。不要先加复杂 shader 或节点物理；当前页面的第一优先级仍是中文表达、首屏比例、滚动稳定性和可验证的回归测试。

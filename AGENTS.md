@@ -19,6 +19,7 @@ React 19.2.7
 Tailwind CSS v4.3.0  (via @theme directive — NOT v3 utilities)
 Three.js 0.184.0
 @react-three/fiber 9.6.1
+@react-three/drei 10.7.7  (installed, not currently used by the scene)
 TypeScript 5.9.3 (strict)
 ```
 
@@ -31,13 +32,12 @@ TypeScript 5.9.3 (strict)
 The page is a single `Hero` component rendering:
 
 1. **Background layer** — `BgQuad` inside Three.js Canvas (NDC fullscreen quad), shader: deep-space gradient + 64px grid + atmospheric glow. Fixed in screen space.
-2. **Void particle field** — `VoidField3D` inside Three.js Canvas (Three.js Points), 55 desktop / 28 mobile
-3. **WebGL slab** — `WebGLSlab.tsx` (R3F Canvas), with `SlabMesh` (3D box) and `GroundPlane` (perspective planes)
-4. **Editorial copy** — HTML/CSS, `z-20`
+2. **WebGL slab** — `WebGLSlab.tsx` (R3F Canvas), with `SlabMesh` (3D box) as the single focal object.
+3. **Narrative copy** — HTML/CSS sections from `NarrativeSection.tsx`, `z-20`, five Chinese stages.
 
 All WebGL content lives in a single Three.js Canvas. The DOM only contains the editorial copy.
 
-The copy block (`<section className="hero-copy">`) sits **above** the WebGL slab in z-index but the slab's 3D camera space makes it visually "in front" in perspective.
+There is no active `VoidField3D`, `GroundPlane`, or `.hero-copy` structure in the current page. `src/components/VoidField.tsx` is legacy unused code and must not be treated as part of the active scene unless it is deliberately reintroduced with matching docs.
 
 ---
 
@@ -51,11 +51,12 @@ The copy block (`<section className="hero-copy">`) sits **above** the WebGL slab
   1. Reads `mouseRef` (from `pointermove` / `touchmove`) → lerps to `currentRef`
   2. Writes to `slabPhysRef.current.target` — this drives WebGL mesh rotation
   3. Writes `titleRef.style.transform` — title counter-parallax
-  4. Writes `slabRef.style.transform` — scroll-driven slab CSS parallax
+  4. Writes narrative section `data-active` and inline presence styles
+  5. Writes `sceneStateRef` — scroll-driven WebGL stage state
 
 **Critical architecture decision:** `slabPhysRef` is owned by `Hero.tsx`. Hero.tsx RAF loop writes `target` every frame from `currentRef` (window-level pointer tracking, no blind spot). Physics computation (spring-damper on `pos`) lives entirely in `SlabMesh.useFrame` — NOT in Hero.tsx. This eliminates the double-write bug where both Hero.tsx and SlabMesh were independently updating `p.pos` in the same frame with different spring constants.
 
-**Important:** `slabRef` is a **div ref** pointing to the container div of `WebGLSlab`. It receives DOM-level scroll-driven transforms from here. The R3F physics inside `WebGLSlab` (via `slabPhysRef`) handles mouse-driven tilt independently.
+**Important:** The fixed WebGL wrapper never receives scroll-driven transforms. Scroll state is passed through `sceneStateRef`, and R3F object transforms inside `WebGLSlab` move the slab.
 
 **Physics state shape:**
 ```typescript
@@ -71,30 +72,19 @@ interface PhysicsState {
 
 - R3F `Canvas` with transparent background
 - **`slabPhysRef` is received as a prop** from `Hero.tsx` — not created internally
+- **`sceneStateRef` is received as a prop** from `Hero.tsx` — this is the damped WebGL render state, not the raw source interaction state.
 - **`BgQuad`** component: NDC fullscreen quad (ignores camera). Renders the deep-space gradient + 64px grid + atmospheric glow in a fragment shader. `renderOrder={-1000}`, `depthTest=false`, `frustumCulled=false`.
-- **`VoidField3D`** component: Three.js `<points>` with custom shader. 55 desktop / 28 mobile particles, flicker via sin wave. `renderOrder={-500}`.
 - `SlabMesh` component inside Canvas: reads `slabPhysRef` via `useFrame`, runs ALL spring-damper physics on `pos`/`vel`, drives mesh rotation
-- `GroundPlane` component inside Canvas: updates `uTime` uniform each frame
+- `SlabMesh` also reads `sceneStateRef` for stage pose, scroll velocity, and shader uniforms
 - **Physics lives inside `useFrame` ONLY** — Hero.tsx does not write `pos`/`vel`
 - `physRef` is typed as `React.MutableRefObject<PhysicsState>`
 
 **Important:** `useFrame` can only be called inside `<Canvas>`. Since `slabPhysRef` is a ref (mutable object), writes from outside Canvas are visible inside `useFrame` immediately.
 
-### `VoidField3D` (inside `WebGLSlab.tsx`)
-
-- Three.js `<points>` with custom `ShaderMaterial`
-- Replaces the old 2D `VoidField.tsx` — no separate canvas
-- 55 particles desktop, 28 mobile
-- Each particle has: position (NDC), baseOpacity, size, phase, speed (per-particle attributes)
-- Vertex shader: flicker via `sin(uTime * speed * 60 + phase)`, gl_PointSize based on per-particle size × pixelRatio
-- Fragment shader: circular soft disc (discard outside radius 0.5), color rgba(180, 215, 255)
-- `renderOrder={-500}` (above BgQuad=-1000, below Slab/Ground)
-
 ### `globals.css`
 
 - Tailwind v4 `@theme` block for all design tokens
-- No component classes — all styling is inline or via `<style>` blocks in Hero.tsx
-- CTA styles, keyframes defined here
+- Narrative section layout classes, CTA styles, keyframes defined here
 - Note: background grid/gradient/glow are now in WebGLSlab BgQuad shader, not CSS
 
 ---

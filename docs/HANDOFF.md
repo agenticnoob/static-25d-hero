@@ -149,6 +149,12 @@ Make room for AI
 
 Browser screenshot QA has not been completed in this pass because the in-app Browser control tool was not exposed in the available tool search results, and Playwright is not installed in `node_modules`.
 
+## Latest QA Update
+
+A later in-app Browser pass completed the first Chinese visual QA round on desktop and 360px mobile. The fixed WebGL canvas stayed pinned to the viewport, all five narrative stages activated in order, and horizontal overflow was not observed.
+
+One mobile issue was fixed: in the reconstruction stage, final copy and CTA were visually too close to the bright slab. `app/globals.css` now positions only the mobile reconstruction copy in the upper third of the viewport so the slab remains the single lower focal object.
+
 ## Current Worktree Notes
 
 The worktree was already dirty before implementation. Pre-existing modified files included:

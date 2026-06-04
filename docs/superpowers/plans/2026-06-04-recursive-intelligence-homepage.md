@@ -1,5 +1,7 @@
 # Recursive Intelligence Homepage Implementation Plan
 
+> Historical implementation plan. The core file structure and long-scroll WebGL homepage have already been implemented. Current task status and remaining work are tracked in `docs/NEXT_STEPS.md` and `docs/CODE_DOC_ALIGNMENT.md`; do not use the unchecked boxes below as the live backlog.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn the current single-screen WebGL hero into a high-end personal homepage that expresses AI-native recursive intelligence through scroll, pointer inertia, WebGL stage transitions, and restrained copy.

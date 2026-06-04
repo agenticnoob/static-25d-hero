@@ -242,9 +242,7 @@ export default function Hero() {
 
         if (inner) {
           const quiet = 1 - presence;
-          const visible = presence > 0.06;
-          inner.style.visibility = visible ? "visible" : "hidden";
-          inner.style.opacity = visible ? (0.12 + presence * 0.88).toFixed(3) : "0";
+          inner.style.opacity = presence > 0.06 ? (0.12 + presence * 0.88).toFixed(3) : "0";
           inner.style.filter = `blur(${(quiet * 1.35).toFixed(2)}px)`;
           inner.style.transform =
             `translate3d(0, ${((quiet * 18 * direction)).toFixed(2)}px, 0) scale(${(0.992 + presence * 0.008).toFixed(3)})`;
@@ -414,7 +412,7 @@ export default function Hero() {
 
       {/* ── WebGL architectural slab ───────────────── */}
       {/* The fixed wrapper never receives transforms. Scroll movement is passed
-          into the R3F scene through sceneStateRef so only slab/ground move. */}
+          into the R3F scene through sceneStateRef so only the slab moves. */}
       <div
         className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
       >
@@ -448,8 +446,7 @@ export default function Hero() {
             transform: "translateX(-50%)",
           }}
         >
-          The visual is fully present without JavaScript; scripting only adds
-          pointer parallax and a restrained entrance animation.
+          文案可在没有 JavaScript 的情况下阅读；WebGL 视觉、滚动阶段和指针惯性需要脚本运行。
         </p>
       </noscript>
     </main>

@@ -147,11 +147,18 @@ const slabFrag = /* glsl */ `
 
     float stageDepth = smoothstep(0.0, 1.0, uScrollProgress);
     float phase = uStageIndex + uStageProgress;
-    float causalTrace = smoothstep(0.75, 1.25, phase)
-                      * (1.0 - smoothstep(2.05, 2.65, phase));
-    float traceA = 1.0 - smoothstep(0.004, 0.018, sdSegment(vUv, vec2(0.16, 0.28), vec2(0.84, 0.58)));
-    float traceB = 1.0 - smoothstep(0.006, 0.024, sdSegment(vUv, vec2(0.25, 0.68), vec2(0.74, 0.34)));
-    col += vec3(0.18, 0.32, 0.46) * (traceA * 0.070 + traceB * 0.030) * causalTrace;
+    float causalTrace = smoothstep(0.70, 1.12, phase)
+                      * (1.0 - smoothstep(2.12, 2.72, phase));
+    float traceA = 1.0 - smoothstep(0.004, 0.022, sdSegment(vUv, vec2(0.13, 0.30), vec2(0.88, 0.59)));
+    float traceB = 1.0 - smoothstep(0.006, 0.026, sdSegment(vUv, vec2(0.22, 0.70), vec2(0.76, 0.34)));
+    float traceC = 1.0 - smoothstep(0.006, 0.030, sdSegment(vUv, vec2(0.18, 0.43), vec2(0.58, 0.48)));
+    float tracePulse = 0.76 + sin(uTime * 0.58 + vUv.x * 7.0) * 0.24;
+    float traceNodes =
+      (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.13, 0.30)))) +
+      (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.88, 0.59)))) +
+      (1.0 - smoothstep(0.010, 0.034, length(vUv - vec2(0.58, 0.48))));
+    col += vec3(0.20, 0.38, 0.52) * (traceA * 0.115 + traceB * 0.060 + traceC * 0.045) * causalTrace * tracePulse;
+    col += vec3(0.36, 0.54, 0.62) * traceNodes * causalTrace * 0.045;
 
     float recursion = smoothstep(1.85, 2.25, phase)
                     * (1.0 - smoothstep(3.10, 3.55, phase));
@@ -159,26 +166,44 @@ const slabFrag = /* glsl */ `
     float loopRadius = length(loopUv);
     float loopAngle = atan(loopUv.y, loopUv.x);
     float loopWave = sin(loopAngle * 3.0 + uTime * 0.42) * 0.012;
-    float loopLine = 1.0 - smoothstep(0.006, 0.025, abs(loopRadius - (0.285 + loopWave)));
-    float loopGap = smoothstep(-0.15, 0.5, sin(loopAngle + uTime * 0.24));
-    col += vec3(0.16, 0.34, 0.48) * loopLine * loopGap * recursion * 0.070;
+    float loopLine = 1.0 - smoothstep(0.006, 0.028, abs(loopRadius - (0.285 + loopWave)));
+    float innerLoop = 1.0 - smoothstep(0.006, 0.025, abs(loopRadius - (0.185 - loopWave * 0.55)));
+    float loopGap = smoothstep(-0.30, 0.56, sin(loopAngle + uTime * 0.30));
+    float loopHead = exp(-abs(sin(loopAngle - uTime * 0.38)) * 10.0);
+    col += vec3(0.17, 0.38, 0.54) * loopLine * loopGap * recursion * 0.115;
+    col += vec3(0.28, 0.46, 0.55) * innerLoop * (1.0 - loopGap * 0.55) * recursion * 0.055;
+    col += vec3(0.42, 0.58, 0.62) * loopHead * loopLine * recursion * 0.040;
 
-    float rebuild = smoothstep(3.55, 4.05, phase);
-    vec2 n1 = vec2(0.24, 0.28);
-    vec2 n2 = vec2(0.38, 0.62);
-    vec2 n3 = vec2(0.63, 0.42);
-    vec2 n4 = vec2(0.78, 0.70);
+    float selfRef = smoothstep(2.82, 3.12, phase)
+                  * (1.0 - smoothstep(3.72, 4.05, phase));
+    float mirrorLine = 1.0 - smoothstep(0.002, 0.014, abs(vUv.x - 0.5));
+    float mirrorEcho = 1.0 - smoothstep(0.012, 0.060, abs(vUv.x - (1.0 - vUv.y * 0.18 - 0.41)));
+    float lens = exp(-length((vUv - vec2(0.5, 0.52)) * vec2(1.4, 0.85)) * 3.2);
+    col += vec3(0.26, 0.33, 0.40) * mirrorLine * selfRef * 0.055;
+    col += vec3(0.18, 0.30, 0.38) * mirrorEcho * lens * selfRef * 0.070;
+    col += vec3(0.10, 0.16, 0.20) * selfRef * lens * 0.060;
+
+    float rebuild = smoothstep(3.50, 3.98, phase);
+    float settle = smoothstep(0.0, 1.0, uStageProgress);
+    vec2 n1 = mix(vec2(0.21, 0.31), vec2(0.25, 0.25), settle);
+    vec2 n2 = mix(vec2(0.39, 0.66), vec2(0.36, 0.58), settle);
+    vec2 n3 = mix(vec2(0.61, 0.39), vec2(0.64, 0.46), settle);
+    vec2 n4 = mix(vec2(0.80, 0.72), vec2(0.77, 0.67), settle);
+    vec2 n5 = mix(vec2(0.50, 0.28), vec2(0.52, 0.33), settle);
     float network =
       (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n1, n2))) +
       (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n2, n3))) +
-      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n3, n4)));
+      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n3, n4))) +
+      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n1, n5))) +
+      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n5, n3)));
     float nodes =
       (1.0 - smoothstep(0.010, 0.032, length(vUv - n1))) +
       (1.0 - smoothstep(0.010, 0.032, length(vUv - n2))) +
       (1.0 - smoothstep(0.010, 0.032, length(vUv - n3))) +
-      (1.0 - smoothstep(0.010, 0.032, length(vUv - n4)));
-    col += vec3(0.20, 0.36, 0.42) * network * rebuild * 0.035;
-    col += vec3(0.34, 0.48, 0.46) * nodes * rebuild * 0.055;
+      (1.0 - smoothstep(0.010, 0.032, length(vUv - n4))) +
+      (1.0 - smoothstep(0.010, 0.032, length(vUv - n5)));
+    col += vec3(0.22, 0.42, 0.46) * network * rebuild * 0.065;
+    col += vec3(0.42, 0.55, 0.50) * nodes * rebuild * 0.095;
     col *= 1.0 - stageDepth * 0.045;
 
     gl_FragColor = vec4(col, 1.0);
@@ -341,6 +366,34 @@ export const PHYS = {
 
 export const REST_TILT_Y = 0.18;
 
+const STAGE_POSES = [
+  { x: 0.00, y: 0.00, z: 0.00, scale: 1.00, yaw: 0.00, roll: 0.00 },
+  { x: -0.34, y: 0.02, z: 0.05, scale: 0.98, yaw: -0.06, roll: -0.012 },
+  { x: 0.30, y: 0.03, z: -0.04, scale: 1.03, yaw: 0.05, roll: 0.012 },
+  { x: 0.00, y: 0.09, z: 0.10, scale: 0.94, yaw: 0.00, roll: 0.000 },
+  { x: -0.22, y: -0.03, z: 0.02, scale: 1.04, yaw: -0.03, roll: -0.006 },
+] as const;
+
+function smoothstep01(value: number): number {
+  const t = Math.max(0, Math.min(1, value));
+  return t * t * (3 - 2 * t);
+}
+
+function getStagePose(stageIndex: number, stageProgress: number) {
+  const current = STAGE_POSES[Math.max(0, Math.min(STAGE_POSES.length - 1, Math.floor(stageIndex)))] ?? STAGE_POSES[0];
+  const next = STAGE_POSES[Math.max(0, Math.min(STAGE_POSES.length - 1, Math.floor(stageIndex) + 1))] ?? current;
+  const t = smoothstep01(stageProgress);
+
+  return {
+    x: THREE.MathUtils.lerp(current.x, next.x, t),
+    y: THREE.MathUtils.lerp(current.y, next.y, t),
+    z: THREE.MathUtils.lerp(current.z, next.z, t),
+    scale: THREE.MathUtils.lerp(current.scale, next.scale, t),
+    yaw: THREE.MathUtils.lerp(current.yaw, next.yaw, t),
+    roll: THREE.MathUtils.lerp(current.roll, next.roll, t),
+  };
+}
+
 /* ─────────────────────────────────────────────────────────────────
    Physics state shape
    ───────────────────────────────────────────────────────────────── */
@@ -395,9 +448,15 @@ function GroundPlane({ sceneStateRef }: GroundPlaneProps) {
     const t = clock.getElapsedTime();
     if (matRef.current) matRef.current.uniforms.uTime.value = t;
     if (meshRef.current) {
+      const pose = getStagePose(
+        sceneStateRef.current.stageIndex,
+        sceneStateRef.current.stageProgress
+      );
       const dropWorld =
         sceneStateRef.current.slabDropPx * (viewport.height / Math.max(window.innerHeight, 1));
+      meshRef.current.position.x = pose.x * 0.55;
       meshRef.current.position.y = baseY - dropWorld;
+      meshRef.current.position.z = pose.z * 0.65;
     }
   });
 
@@ -446,7 +505,8 @@ function SlabMesh({
   const slabMatRef = useRef<THREE.ShaderMaterial>(null);
   const { viewport } = useThree();
   const slabScale = Math.min(0.58, Math.max(0.38, (viewport.width / 4.2) * 0.62));
-  const slabY = viewport.width < 4 ? -1.08 : -1.18;
+  const isCompact = viewport.width < 4;
+  const slabY = isCompact ? -1.02 : -1.18;
 
   useFrame(({ clock }) => {
     const p = physRef.current;
@@ -473,11 +533,18 @@ function SlabMesh({
     p.pos.y = Math.max(-0.55, Math.min(0.88, p.pos.y));
 
     if (slabRef.current) {
+      const pose = getStagePose(sceneStateRef.current.stageIndex, sceneStateRef.current.stageProgress);
       const dropWorld =
         sceneStateRef.current.slabDropPx * (viewport.height / Math.max(window.innerHeight, 1));
-      slabRef.current.position.y = slabY - dropWorld;
+      const compactScale = isCompact ? 0.92 : 1;
+
+      slabRef.current.position.x = pose.x * compactScale;
+      slabRef.current.position.y = slabY + pose.y - dropWorld;
+      slabRef.current.position.z = pose.z;
       slabRef.current.rotation.x = p.pos.y;
-      slabRef.current.rotation.y = p.pos.x;
+      slabRef.current.rotation.y = p.pos.x + pose.yaw;
+      slabRef.current.rotation.z = pose.roll;
+      slabRef.current.scale.setScalar(slabScale * pose.scale * compactScale);
     }
     if (slabMatRef.current) {
       slabMatRef.current.uniforms.uMouse.value.set(p.pos.x * 1.6, p.pos.y * 1.6);

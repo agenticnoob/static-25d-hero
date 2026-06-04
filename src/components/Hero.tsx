@@ -65,7 +65,7 @@ function scheduleFrame(callback: FrameRequestCallback): number {
     return window.requestAnimationFrame(callback);
   }
 
-  return window.setTimeout(() => callback(performance.now()), 16);
+  return window.setTimeout(() => callback(Date.now()), 16);
 }
 
 function cancelFrame(id: number) {
@@ -126,8 +126,12 @@ export default function Hero() {
       window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
       "ontouchstart" in window;
 
-    if (prefersReduced || isTouchDevice.current) {
-      // Skip entrance on touch — content is immediately readable
+    if (
+      prefersReduced ||
+      isTouchDevice.current ||
+      typeof window.requestAnimationFrame !== "function"
+    ) {
+      // Skip entrance on touch or timing-constrained browsers.
       ENTRANCE_ELEMENTS.forEach((selector) => {
         const el = document.querySelector(selector) as HTMLElement | null;
         if (!el) return;
@@ -159,7 +163,6 @@ export default function Hero() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) return;
 
     const clamp = (v: number, min: number, max: number) =>
       Math.max(min, Math.min(max, v));
@@ -195,7 +198,9 @@ export default function Hero() {
       slabPhysRef.current.active = false;
     };
 
-    if (isTouch) {
+    if (prefersReduced) {
+      slabPhysRef.current.active = false;
+    } else if (isTouch) {
       window.addEventListener("touchmove", onTouchMove, { passive: true });
       window.addEventListener("touchend", onTouchEnd, { passive: true });
     } else {
@@ -204,18 +209,7 @@ export default function Hero() {
       window.addEventListener("blur", onLeave);
     }
 
-    const onScroll = () => { scrollYRef.current = window.scrollY; };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-
-    /* ── RAF loop ─────────────────────────────────────── */
-    const tick = () => {
-      const t = 0.055;
-      currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
-      currentRef.current.y = lerp(currentRef.current.y, mouseRef.current.y, t);
-      const mx = currentRef.current.x;
-      const my = currentRef.current.y;
-
+    const updateScrollState = () => {
       const maxScroll = Math.max(
         document.documentElement.scrollHeight - window.innerHeight,
         1
@@ -230,46 +224,28 @@ export default function Hero() {
       sceneStateRef.current.stageIndex = getStageIndex(scrollStageRef.current.stage);
       sceneStateRef.current.stageProgress = scrollStageRef.current.stageProgress;
 
-      const viewportProgress = scrollYRef.current / Math.max(window.innerHeight, 1);
-      sectionsRef.current.forEach((section, index) => {
-        const distance = viewportProgress - index;
+      sectionsRef.current.forEach((section) => {
+        const rect = section.getBoundingClientRect();
+        const sectionCenter = rect.top + rect.height / 2;
+        const distance = (sectionCenter - window.innerHeight / 2) /
+          Math.max(window.innerHeight, 1);
         const presence = clamp(1 - Math.abs(distance), 0, 1);
-        const direction = distance < 0 ? 1 : -1;
+        const direction = distance > 0 ? 1 : -1;
         const inner = section.querySelector<HTMLElement>(".narrative-section-inner");
 
         section.dataset.active = presence >= 0.5 ? "true" : "false";
 
         if (inner) {
           const quiet = 1 - presence;
-          inner.style.opacity = (0.18 + presence * 0.82).toFixed(3);
-          inner.style.filter = `blur(${(quiet * 1.6).toFixed(2)}px)`;
+          const visible = presence > 0.06;
+          inner.style.visibility = visible ? "visible" : "hidden";
+          inner.style.opacity = visible ? (0.08 + presence * 0.92).toFixed(3) : "0";
+          inner.style.filter = `blur(${(quiet * 2.0).toFixed(2)}px)`;
           inner.style.transform =
             `translate3d(0, ${((quiet * 28 * direction)).toFixed(2)}px, 0) scale(${(0.986 + presence * 0.014).toFixed(3)})`;
         }
       });
 
-      /* ── Mouse target — drives WebGL mesh rotation via spring physics in SlabMesh ── */
-      /* Hero.tsx writes target every frame (window-level pointermove, no blind spot).
-         SlabMesh.useFrame reads target and runs spring physics independently.
-         Separation of concerns: Hero writes target → SlabMesh computes physics.
-         No double-write of p.pos/p.vel in two places. */
-      const p = slabPhysRef.current;
-      p.target.x = mx * 0.22;
-      p.target.y = my * 0.14 + PHYS_REST_Y;
-      /* p.active is maintained by onMove/onLeave (window-level events) */
-
-      /* ── DOM-level parallax: title ──────── */
-      if (titleRef.current) {
-        if (isTouch) {
-          titleRef.current.style.transform = `translate3d(0px, 0px, 0px)`;
-        } else {
-          titleRef.current.style.transform =
-            `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
-        }
-      }
-
-      /* ── Scroll parallax: keep the fixed canvas wrapper still.
-         The R3F scene reads this pixel offset and moves only the slab/ground. */
       scrollLerpedRef.current = lerp(
         scrollLerpedRef.current,
         scrollYRef.current,
@@ -277,8 +253,47 @@ export default function Hero() {
       );
       const sy = scrollLerpedRef.current;
       const norm = sy / Math.max(window.innerHeight, 1);
-      sceneStateRef.current.slabDropPx =
-        norm * (isTouch ? SLAB_MAX_Y_TOUCH : SLAB_MAX_Y_DESKTOP);
+      sceneStateRef.current.slabDropPx = prefersReduced
+        ? 0
+        : norm * (isTouch ? SLAB_MAX_Y_TOUCH : SLAB_MAX_Y_DESKTOP);
+    };
+
+    const onScroll = () => {
+      scrollYRef.current = window.scrollY;
+      updateScrollState();
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    /* ── RAF loop ─────────────────────────────────────── */
+    const tick = () => {
+      const t = 0.055;
+      currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
+      currentRef.current.y = lerp(currentRef.current.y, mouseRef.current.y, t);
+      const mx = prefersReduced ? 0 : currentRef.current.x;
+      const my = prefersReduced ? 0 : currentRef.current.y;
+
+      updateScrollState();
+
+      /* ── Mouse target — drives WebGL mesh rotation via spring physics in SlabMesh ── */
+      /* Hero.tsx writes target every frame (window-level pointermove, no blind spot).
+         SlabMesh.useFrame reads target and runs spring physics independently.
+         Separation of concerns: Hero writes target → SlabMesh computes physics.
+         No double-write of p.pos/p.vel in two places. */
+      const p = slabPhysRef.current;
+      p.target.x = prefersReduced ? 0 : mx * 0.22;
+      p.target.y = prefersReduced ? PHYS_REST_Y : my * 0.14 + PHYS_REST_Y;
+      /* p.active is maintained by onMove/onLeave (window-level events) */
+
+      /* ── DOM-level parallax: title ──────── */
+      if (titleRef.current) {
+        if (isTouch || prefersReduced) {
+          titleRef.current.style.transform = `translate3d(0px, 0px, 0px)`;
+        } else {
+          titleRef.current.style.transform =
+            `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
+        }
+      }
 
       rafRef.current = scheduleFrame(tick);
     };

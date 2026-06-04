@@ -60,9 +60,9 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | Element | Size | Weight | Style |
 |---------|------|--------|-------|
 | Brand | `10px` | normal | Italic, `letter-spacing: 0.38em` |
-| Eyebrow | `10px` | normal | Italic, `letter-spacing: 0.36em`, uppercase |
-| Title | `clamp(36px, 6vw, 64px)` | 400 | Normal + italic accent, `letter-spacing: -0.015em` |
-| Subtitle | `15px` | normal | Italic, `letter-spacing: 0.01em` |
+| Kicker | `10px` | normal | Italic, `letter-spacing: 0.28em`, uppercase |
+| Narrative title | `clamp(34px, 5.2vw, 66px)` | 400 | Georgia, `letter-spacing: -0.015em` |
+| Narrative body | `15px` | normal | Italic, `letter-spacing: 0.01em` |
 | CTA | `10.5px` | normal | Uppercase, `letter-spacing: 0.24em` |
 | Meta | `9.5px` | normal | Italic, `letter-spacing: 0.26em` |
 
@@ -87,13 +87,20 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | z-4 | Atmospheric glow | 4 | Zero |
 | z-5 | WebGL slab | 5 | Medium scroll |
 | z-10 | Brand / Meta | 10 | Zero |
-| z-20 | Editorial copy | 20 | Zero |
+| z-20 | Narrative copy | 20 | Scroll-stage presence |
 
 ### Spatial Composition
 
-- WebGL slab is the **single focal object** — all copy is positioned around it, not competing with it
-- Slab sits in the lower half of the viewport, receding toward a vanishing point
-- Copy block is in the upper 40% of the viewport
+- WebGL slab is the **single focal object**. Stage effects must modify this slab, not introduce a second focal mesh.
+- Slab sits in the lower half of the viewport, receding toward a vanishing point.
+- The fixed WebGL wrapper must remain `top: 0`, `bottom: 100svh`, and `transform: none` during scroll.
+- Scroll-driven slab movement happens inside R3F through `sceneStateRef.slabDropPx`; never apply scroll transforms to the fixed DOM wrapper.
+- Narrative copy changes posture by stage:
+  - Observation: centered thesis.
+  - Causality: left-weighted, explaining the chain.
+  - Recursion: right-weighted, implying feedback.
+  - Self-reference: narrow centered copy.
+  - Reconstruction: lower-left final proposition with CTA.
 - Atmospheric radial glow sits behind the slab, creating depth separation
 - Negative space is treated as a compositional element, not emptiness
 
@@ -101,8 +108,8 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 | Breakpoint | Behavior |
 |------------|---------|
-| `≤ 768px` | Copy top `12vh`, padding `24px`, title `clamp(28px,8vw,48px)` |
-| `≤ 400px` | Copy top `10vh`, padding `16px`, title `clamp(24px,9vw,36px)` |
+| `≤ 768px` | Stage layout recenters, title `clamp(27px,8vw,44px)`, body `13px` |
+| `≤ 400px` | Padding `18px`, title `clamp(25px,8.5vw,34px)`, body `12.5px` |
 | `landscape h≤500px` | Subtitle hidden, copy top `6vh` |
 | `hover:none + pointer:coarse` | Entrance animation disabled, DPR capped at 1 |
 
@@ -124,7 +131,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | Background | `tx=0.8px, ty=0.6px` | Barely perceptible; just enough to feel spatial |
 | Title | `tx=-0.3px, ty=-0.2px` | Counter-displacement; creates depth separation from background |
 | Eyebrow / Subtitle / CTA | `0` | Text must remain legible; any parallax hurts readability |
-| WebGL slab | Mouse-driven tilt via physics | Inertia + gravity model; explained in `AGENTS.md` |
+| WebGL slab | Mouse-driven tilt + scroll-stage pose | Inertia + gravity, plus stage-aware x/y/z/scale/yaw/roll |
 
 ### Physics Model (WebGL Slab)
 
@@ -141,6 +148,12 @@ When the pointer leaves: the slab drifts back toward rest with gravity pulling i
 
 This is intentionally **not** a 1:1 tilt. The lag and inertia make it feel physical.
 
+### Scroll Stage Presence
+
+Each narrative section receives `data-active` from the unified `Hero.tsx` rAF loop. Active text is full opacity; inactive text recedes through lower opacity, slight blur, and restrained y translation. The presence effect must preserve readability and should not become a carousel or slideshow.
+
+`prefers-reduced-motion` keeps scroll-stage state updates active, but disables pointer/title parallax and slab scroll drop. This keeps the page readable without motion dependency.
+
 ---
 
 ## 6. WebGL Details
@@ -154,6 +167,7 @@ This is intentionally **not** a 1:1 tilt. The lag and inertia make it feel physi
 ### Slab Mesh
 
 - `boxGeometry [4.2, 0.035, 2.6]` — a flat, wide slab
+- `STAGE_POSES` defines stage-aware x/y/z/scale/yaw/roll offsets. These are small architectural shifts, not animation set pieces.
 - Custom `shaderMaterial` with:
   - Anti-aliased grid lines via `fwidth` (no mipmap artifacts)
   - Two grid scales: coarse (0.08) + fine (0.02)
@@ -162,6 +176,10 @@ This is intentionally **not** a 1:1 tilt. The lag and inertia make it feel physi
   - Normal-based lighting
   - Radial pulse glow (time-driven)
   - uMouse-driven sheen for pointer proximity
+  - Causality trace lines and low-contrast nodes
+  - Recursion loop light paths
+  - Self-reference mirror echo
+  - Reconstruction network re-layout
 
 ### Ground Plane
 
@@ -169,6 +187,17 @@ This is intentionally **not** a 1:1 tilt. The lag and inertia make it feel physi
 - Radial + depth fade alpha
 - Slow scanline sweep (time-driven, barely visible)
 - Vanishing point glow
+- Tracks the slab's stage pose subtly, at reduced amplitude, so the ground supports the focal object without becoming a second object.
+
+### Canvas Sizing Rule
+
+The WebGL DOM wrapper must stay:
+
+```tsx
+className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
+```
+
+Do not add a CSS `transform`, `filter`, or `perspective` to this wrapper or any ancestor that should behave as viewport-fixed. Those properties can create a fixed-position containing block and make the canvas appear to move with page scroll. Use R3F object transforms for slab/ground movement instead.
 
 ---
 
@@ -181,6 +210,6 @@ Without explicit user direction, the following are **constraints**, not suggesti
 - **No bounce/overshoot:** `cubic-bezier(0.28, 0.72, 0.18, 1)` only. No `ease-out-back`, no spring libraries.
 - **Single focal object:** The slab is the only 3D element. Never add a second mesh, particle burst, or competing visual.
 - **CTA:** Pure CSS hover, zero JS handlers. Never attach React event handlers to the CTA.
-- **Parallax:** Background + title only. Eyebrow, subtitle, CTA = zero parallax always.
+- **Parallax:** Title counter-parallax only on non-touch devices. Narrative kicker/body/CTA = zero pointer parallax.
 - **Mobile:** DPR capped at 1. Entrance animation disabled. Parallax amplitude halved.
-- **`prefers-reduced-motion`:** Both entrance animation and parallax must be killed when set.
+- **`prefers-reduced-motion`:** Entrance animation, pointer/title parallax, and slab scroll drop must be killed when set. Scroll-stage readability state may still update.

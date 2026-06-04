@@ -1,6 +1,6 @@
-# Static 2.5D Hero — Spatial
+# Spatial — 递归智能界面
 
-**Spatial interfaces for agentic systems.** A cinematic, architectural landing hero page. Single focal object, restrained palette, editorial typography, WebGL depth.
+一个中文、空间化的 AI-native 个人主页。页面不是简历站，也不是项目索引；它用长滚动、固定 WebGL 画布、惯性和短句叙事表达五个阶段：观察、因果、递归、自指、重构。
 
 Tech stack: **Next.js 16 · React 19 · Tailwind CSS v4 · Three.js / @react-three/fiber**
 
@@ -11,13 +11,17 @@ Tech stack: **Next.js 16 · React 19 · Tailwind CSS v4 · Three.js / @react-thr
 ```
 static-25d-hero/
 ├── app/
-│   ├── globals.css       # Tailwind v4 @theme, obsidian palette, CTA styles
-│   ├── layout.tsx       # Root layout: dark mode, meta, viewport
-│   └── page.tsx         # Imports Hero, exports default page
+│   ├── globals.css       # Tailwind v4 @theme, narrative layout, CTA, responsive rules
+│   ├── layout.tsx        # Chinese metadata, dark root layout
+│   └── page.tsx          # Renders the homepage
 ├── src/components/
-│   ├── Hero.tsx          # Parallax rAF loop, entrance animation, layout
-│   ├── WebGLSlab.tsx    # R3F Canvas: slab mesh + ground plane, physics
-│   └── VoidField.tsx    # 2D canvas particle field (ambient)
+│   ├── Hero.tsx          # Unified rAF loop, scroll stage state, fixed canvas wrapper
+│   ├── NarrativeSection.tsx # Five sparse Chinese narrative stages
+│   └── WebGLSlab.tsx     # Single R3F Canvas: background, particles, slab, ground
+├── src/content/
+│   └── homepage.ts       # Chinese section copy and CTA
+├── src/lib/
+│   └── interaction.ts    # Scroll stages and shared scene state types
 ├── next.config.mjs
 ├── postcss.config.js     # Tailwind v4 PostCSS plugin
 ├── tsconfig.json         # Strict TypeScript
@@ -52,6 +56,24 @@ npm run start    # Serve the built output
 
 ---
 
+## Current architecture
+
+The page is a `500svh` long-scroll surface. The WebGL canvas stays fixed at `100svh`; scrolling updates a mutable `sceneStateRef`, and the R3F scene moves only the slab and ground internally. This avoids creating a fixed-position containing block bug where the canvas itself appears to fall during scroll.
+
+There is one WebGL focal object: the slab. Its shader and pose are stage-aware:
+
+| Stage | HTML narrative | WebGL expression |
+|-------|----------------|------------------|
+| 观察 | Centered thesis | Stable slab, quiet room |
+| 因果 | Left-weighted copy | Low-contrast trace lines and nodes |
+| 递归 | Right-weighted copy | Slow loop light paths |
+| 自指 | Narrow centered copy | Mirror line and self-reference echo |
+| 重构 | Lower-left final section | Small network re-layout on the slab |
+
+The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narrative sections. All particle/background/slab rendering lives in `WebGLSlab.tsx`.
+
+---
+
 ## Design language
 
 Documented in full in `DESIGN.md`. Core philosophy:
@@ -60,7 +82,7 @@ Documented in full in `DESIGN.md`. Core philosophy:
 - **restrained** — one accent color family (blue-gray), no decoration for decoration's sake
 - **quiet luxury** — low-saturation palette, editorial serif typography, generous negative space
 - **single focal object** — everything orbits the slab; no competing elements
-- **editorial layout** — centered copy, top-left brand mark, top-right meta, no footer clutter
+- **stage-aware layout** — each viewport changes copy alignment and slab behavior
 - **spatial composition** — perspective depth, layered parallax, atmospheric void behind
 
 See `DESIGN.md` for color tokens, typography system, animation philosophy, and mobile strategy.
@@ -84,10 +106,12 @@ See `AGENTS.md` for:
 
 | What | Where |
 |------|-------|
-| Headline / subtitle copy | `Hero.tsx` → `<h1>`, `<p className="subtitle">` |
-| CTA label / href | `Hero.tsx` → `<a className="cta-link">` |
-| Brand mark text | `Hero.tsx` → `<header className="brand">` |
+| Chinese section copy | `src/content/homepage.ts` |
+| CTA label / href | `src/content/homepage.ts` |
+| Brand mark / meta | `src/components/Hero.tsx` |
 | Obsidian palette | `app/globals.css` → `@theme` block |
-| Parallax amplitudes | `Hero.tsx` → constants `BG_TX/TY`, `TITLE_TX/TY` |
-| Physics constants | `WebGLSlab.tsx` → `PHYS` object |
-| VoidField particle count | `VoidField.tsx` → `PARTICLE_COUNT` |
+| Narrative stage layout | `app/globals.css` → `.narrative-section--*` |
+| Scroll stage model | `src/lib/interaction.ts` |
+| Slab physics constants | `src/components/WebGLSlab.tsx` → `PHYS` |
+| Stage-specific slab pose | `src/components/WebGLSlab.tsx` → `STAGE_POSES` |
+| Shader stage effects | `src/components/WebGLSlab.tsx` → `slabFrag` |

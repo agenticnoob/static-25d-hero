@@ -142,10 +142,13 @@ body {
 
 /* ── Recursive homepage narrative sections ─────────────── */
 .narrative-section {
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
 }
 
 .narrative-section-inner {
+  max-width: 760px;
   transform: translate3d(0, 0, 0);
   transition:
     opacity 0.24s cubic-bezier(0.28, 0.72, 0.18, 1),
@@ -154,16 +157,83 @@ body {
   will-change: opacity, filter, transform;
 }
 
+.narrative-section--observation {
+  justify-content: center;
+}
+
+.narrative-section--observation .narrative-section-inner {
+  max-width: 760px;
+  text-align: center;
+}
+
+.narrative-section--causality {
+  justify-content: flex-start;
+}
+
+.narrative-section--causality .narrative-section-inner {
+  margin-left: clamp(28px, 9vw, 132px);
+  max-width: 650px;
+  text-align: left;
+}
+
+.narrative-section--causality .narrative-body {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.narrative-section--recursion {
+  justify-content: flex-end;
+}
+
+.narrative-section--recursion .narrative-section-inner {
+  margin-right: clamp(28px, 8vw, 118px);
+  max-width: 660px;
+  text-align: right;
+}
+
+.narrative-section--recursion .narrative-body {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+.narrative-section--selfReference {
+  justify-content: center;
+}
+
+.narrative-section--selfReference .narrative-section-inner {
+  max-width: 620px;
+  text-align: center;
+}
+
+.narrative-section--reconstruction {
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-bottom: clamp(76px, 14svh, 148px);
+}
+
+.narrative-section--reconstruction .narrative-section-inner {
+  margin-left: clamp(28px, 11vw, 156px);
+  max-width: 700px;
+  text-align: left;
+}
+
+.narrative-section--reconstruction .narrative-body {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .narrative-section[data-active="false"] .narrative-section-inner {
-  opacity: 0.2;
-  filter: blur(1.4px);
+  opacity: 0;
+  filter: blur(2px);
   transform: translate3d(0, 24px, 0) scale(0.986);
+  visibility: hidden;
 }
 
 .narrative-section[data-active="true"] .narrative-section-inner {
   opacity: 1;
   filter: blur(0);
   transform: translate3d(0, 0, 0) scale(1);
+  visibility: visible;
 }
 
 .narrative-kicker {
@@ -179,7 +249,7 @@ body {
 .narrative-title {
   color: #EDE9E3;
   font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
-  font-size: clamp(34px, 5vw, 64px);
+  font-size: clamp(34px, 5.2vw, 66px);
   font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 1.12;
@@ -234,11 +304,37 @@ body {
   }
 
   .narrative-title {
-    font-size: clamp(28px, 8vw, 46px);
+    font-size: clamp(27px, 8vw, 44px);
+    line-height: 1.18;
   }
 
   .narrative-body {
     font-size: 13px;
+    line-height: 1.72;
+    max-width: 31rem;
+  }
+
+  .narrative-section {
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 0;
+  }
+
+  .narrative-section-inner,
+  .narrative-section--causality .narrative-section-inner,
+  .narrative-section--recursion .narrative-section-inner,
+  .narrative-section--reconstruction .narrative-section-inner {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 620px;
+    text-align: center;
+  }
+
+  .narrative-section--causality .narrative-body,
+  .narrative-section--recursion .narrative-body,
+  .narrative-section--reconstruction .narrative-body {
+    margin-left: auto;
+    margin-right: auto;
   }
 
   /* CTA: larger touch target */
@@ -263,6 +359,19 @@ body {
 
   .title {
     font-size: clamp(24px, 9vw, 36px) !important;
+  }
+
+  .narrative-section-inner {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .narrative-title {
+    font-size: clamp(25px, 8.5vw, 34px);
+  }
+
+  .narrative-body {
+    font-size: 12.5px;
   }
 }
 

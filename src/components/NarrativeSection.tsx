@@ -12,14 +12,16 @@ export default function NarrativeSection({
   isIntro = false,
   titleRef,
 }: NarrativeSectionProps) {
+  const stageClass = `narrative-section--${section.stage}`;
+
   return (
     <section
-      className="narrative-section relative z-20 flex min-h-[100svh] items-center"
+      className={`narrative-section ${stageClass} relative z-20 flex min-h-[100svh]`}
       data-stage={section.stage}
       data-active={isIntro ? "true" : "false"}
       aria-labelledby={`section-${section.stage}`}
     >
-      <div className="narrative-section-inner mx-auto w-full max-w-[760px] px-6 text-center md:px-10">
+      <div className="narrative-section-inner w-full px-6 md:px-10">
         <p className={`${isIntro ? "eyebrow " : ""}narrative-kicker mb-6`}>
           {section.kicker}
         </p>

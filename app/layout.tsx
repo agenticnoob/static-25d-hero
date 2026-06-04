@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Spatial — 递归智能界面",
+  title: "noobli — spatial AI-native interface",
   description:
-    "一个关于 AI-native 界面、递归工作流与系统重构的空间化个人主页。",
+    "noobli 的空间化个人主页，关于 AI-native interface、递归工作流、WebGL 和系统重构。",
 };
 
 export default function RootLayout({

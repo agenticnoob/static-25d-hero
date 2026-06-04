@@ -12,7 +12,7 @@ The interaction target is premium product-page motion: fluid, restrained, legibl
 
 ## 2. Color System
 
-All tokens are defined in `app/globals.css` via Tailwind v4 `@theme` directive.
+CSS-facing design tokens are defined in `app/globals.css` via Tailwind v4 `@theme` directive. WebGL shader colors are literal GLSL `vec3` values, but they are mapped to the same obsidian + warm off-white identity and must be updated with this section when changed.
 
 ### Obsidian Palette (Background)
 
@@ -83,7 +83,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 | Layer | Element | z-index | Parallax |
 |-------|---------|---------|---------|
-| z-0 | Background gradient / atmosphere | 0 | Low, Lenis/ScrollTrigger aware |
+| z-0 | Background gradient / atmosphere | 0 | Fixed WebGL `BgQuad`, no pointer parallax |
 | z-0 | Grid or soft depth field | 0 | Zero or very low |
 | z-4 | Atmospheric glow | 4 | Zero |
 | z-5 | WebGL slab / physics object | 5 | Stage pose + pointer tilt + restrained rigid-body response |
@@ -135,7 +135,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 | Layer | Amplitude | Rationale |
 |-------|-----------|-----------|
-| Background | `tx=0.8px, ty=0.6px` | Barely perceptible; just enough to feel spatial |
+| Background | `0` | Fixed `BgQuad` shader; depth comes from gradient, grid, and atmospheric glow |
 | Title | `tx=-0.3px, ty=-0.2px` | Counter-displacement; creates depth separation from background |
 | Eyebrow / Subtitle / CTA | `0` | Text must remain legible; any parallax hurts readability |
 | WebGL slab | Mouse-driven tilt + damped scroll-stage pose | Inertia + gravity, plus stage-aware x/y/z/scale/yaw/roll/pitch and restrained velocity response |
@@ -192,7 +192,7 @@ One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions
 
 ### Slab Mesh
 
-- `boxGeometry [4.2, 0.035, 2.6]` — a flat, wide slab
+- `boxGeometry [4.2, 0.035, 2.6, 32, 1, 18]` — a flat, wide slab with enough subdivisions for restrained vertex bending
 - `STAGE_POSES` defines stage-aware x/y/z/scale/yaw/roll/pitch offsets. These are visible spatial changes, but still restrained enough to avoid a game-like flip.
 - Custom `shaderMaterial` with:
   - Grey-white slab base that reads brighter than the obsidian background
@@ -203,6 +203,8 @@ One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions
   - Normal-based lighting
   - Radial pulse glow (time-driven)
   - uMouse-driven sheen for pointer proximity
+  - uInertia-driven observation sweep and material response
+  - Restrained vertex bending via `vWarp`, driven by scroll phase and stage gates
   - Causality trace lines and low-contrast nodes
   - Recursion loop light paths
   - Self-reference mirror echo

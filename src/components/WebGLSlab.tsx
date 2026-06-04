@@ -35,14 +35,13 @@ const bgFrag = /* glsl */ `
   }
 
   void main() {
-    /* ── Deep-space radial gradient (CSS: radial-gradient ellipse 80% 60% at 50% 40%)
-       Dark gray, neutral, no blue cast. */
+    /* ── Deep-space radial gradient mapped to the obsidian palette. */
     vec2  center  = vec2(0.5, 0.4);
     float aspect = 80.0 / 60.0;           /* ellipse rx/ry ratio */
     vec2  toC    = (vUv - center) * vec2(1.0, aspect);
     float ed     = length(toC) / length(vec2(0.5, 0.5 * aspect));
-    vec3  deep   = vec3(0.082, 0.082, 0.088); /* #151516 — darkest */
-    vec3  mid    = vec3(0.145, 0.145, 0.154); /* #252527 — mid dark gray */
+    vec3  deep   = vec3(0.039, 0.047, 0.071); /* #0A0C12 — obsidian deep */
+    vec3  mid    = vec3(0.086, 0.106, 0.149); /* #161B26 — obsidian top */
     vec3  col    = mix(mid, deep, clamp(ed * 1.14, 0.0, 1.0));
 
     /* ── 64px grid with radial mask — neutral white, low opacity */
@@ -50,12 +49,12 @@ const bgFrag = /* glsl */ `
     float mask = 1.0 - smoothstep(0.0, 0.8, length(vUv - vec2(0.5, 0.5)));
     col += vec3(0.50, 0.50, 0.52) * g * mask * 0.020;
 
-    /* ── Atmospheric glow — neutral gray, very subtle (was blue) */
+    /* ── Atmospheric glow — low-saturation blue-gray edge light */
     vec2  gCenter = vec2(0.5, 0.48);
     vec2  gToC    = (vUv - gCenter) * vec2(1.0, 1.0 / 0.8);
     float gd      = length(gToC) / 0.5;
     float glow    = max(0.0, 1.0 - gd) * 0.065;
-    col += vec3(0.24, 0.24, 0.26) * glow;
+    col += vec3(0.20, 0.28, 0.34) * glow;
 
     gl_FragColor = vec4(col, 1.0);
   }
@@ -66,12 +65,54 @@ const bgFrag = /* glsl */ `
    ───────────────────────────────────────────────────────────────── */
 
 const slabVert = /* glsl */ `
+  uniform float uTime;
+  uniform float uInertia;
+  uniform float uScrollProgress;
+  uniform float uScrollVelocity;
+  uniform float uStageIndex;
+  uniform float uStageProgress;
   varying vec2 vUv;
   varying vec3 vNormal;
+  varying float vWarp;
+
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(43.13, 137.17))) * 48758.233);
+  }
+
   void main() {
     vUv     = uv;
     vNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+    vec3 p = position;
+    float phase = uStageIndex + uStageProgress;
+    float causal = smoothstep(1.0, 1.22, phase) * (1.0 - smoothstep(1.78, 2.0, phase));
+    float recursion = smoothstep(2.0, 2.22, phase) * (1.0 - smoothstep(2.78, 3.0, phase));
+    float selfRef = smoothstep(3.0, 3.22, phase) * (1.0 - smoothstep(3.78, 4.0, phase));
+    float rebuild = smoothstep(4.0, 4.35, phase);
+    float topMask = smoothstep(-0.10, 0.62, normal.y);
+    vec2 centered = uv - vec2(0.5);
+    float drift = sin((uv.y - 0.5) * 8.0 + uTime * 0.42 + phase) * (0.0035 + uInertia * 0.0040);
+    float jitter = (hash(uv + vec2(phase, phase + 0.37)) - 0.5) * 0.0012 * (1.0 + uInertia);
+    float scrollCurve = (centered.x * centered.x - centered.y * 0.16) * uScrollProgress * 0.035;
+    float feedbackWave = sin((uv.x * 2.0 + uv.y * 1.35 + uTime * 0.10) * 6.28318) * 0.014;
+    float causalShear = centered.x * 0.018 + centered.y * 0.010;
+    float rebuildSettle = (abs(centered.x) + abs(centered.y)) * 0.016;
+
+    vWarp = topMask * (
+      scrollCurve +
+      causal * causalShear +
+      recursion * feedbackWave +
+      selfRef * abs(centered.x) * 0.020 -
+      rebuild * rebuildSettle
+    );
+
+    p += normal * drift;
+    p.y += vWarp + abs(uScrollVelocity) * topMask * 0.010;
+    p.z += causal * centered.x * 0.030 * topMask;
+    p.x += selfRef * centered.y * 0.018 * topMask;
+    p.x += jitter;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   }
 `;
 
@@ -87,8 +128,10 @@ const slabFrag = /* glsl */ `
   uniform float uStageProgress;
   uniform float uScrollVelocity;
   uniform vec2  uMouse;
+  uniform float uInertia;
   varying vec2 vUv;
   varying vec3 vNormal;
+  varying float vWarp;
 
   float grid(vec2 uv, float spacing) {
     vec2 g = abs(fract(uv / spacing - 0.5) / fwidth(uv / spacing));
@@ -116,9 +159,24 @@ const slabFrag = /* glsl */ `
     return length(pa - ba * h);
   }
 
+  float stageGate(float start, float end, float phase) {
+    float soft = 0.22;
+    float inGate = smoothstep(start, start + soft, phase);
+    float outGate = 1.0 - smoothstep(end - soft, end, phase);
+    return inGate * outGate;
+  }
+
   void main() {
+    float phase = uStageIndex + uStageProgress;
+    float obs = stageGate(0.0, 1.0, phase);
+    float causal = stageGate(1.0, 2.0, phase);
+    float recursion = stageGate(2.0, 3.0, phase);
+    float selfRef = stageGate(3.0, 4.0, phase);
+    float rebuild = stageGate(4.0, 5.0, phase);
+
     vec3 col = vec3(0.58, 0.58, 0.55);
     col += noise(vUv * 40.0) * 0.035;
+    col += vec3(0.78, 0.77, 0.72) * clamp(vWarp * 4.4, -0.035, 0.055);
 
     float g1 = grid(vUv, 0.08) * 0.17;
     float g2 = grid(vUv, 0.02) * 0.055;
@@ -147,24 +205,26 @@ const slabFrag = /* glsl */ `
     float sheen = clamp(vUv.y + uMouse.y * 0.1 - 0.4, 0.0, 1.0) * 0.03;
     col += vec3(0.88, 0.86, 0.78) * sheen;
     col += vec3(0.98, 0.96, 0.88) * clamp(abs(uScrollVelocity) * 0.22, 0.0, 0.05);
+    col += vec3(0.96, 0.94, 0.84) * (0.06 + uInertia * 0.08) * obs;
 
     float stageDepth = smoothstep(0.0, 1.0, uScrollProgress);
-    float phase = uStageIndex + uStageProgress;
-    float causalTrace = smoothstep(0.70, 1.12, phase)
-                      * (1.0 - smoothstep(2.12, 2.72, phase));
+
+    float observeSweep = 1.0 - smoothstep(0.004, 0.018, abs(vUv.x - (0.5 + uMouse.x * 0.09 + sin(uTime * 0.35 + vUv.y * 8.0) * 0.008)));
+    float observeNode = 1.0 - smoothstep(0.008, 0.020, abs(vUv.y - (0.5 + uMouse.y * 0.05 + cos(uTime * 0.28 + vUv.x * 8.0) * 0.005)));
+    col += vec3(0.90, 0.88, 0.82) * (observeSweep * 0.36 + observeNode * 0.18) * (0.4 + 1.4 * uInertia) * obs;
+
     float traceA = 1.0 - smoothstep(0.004, 0.022, sdSegment(vUv, vec2(0.13, 0.30), vec2(0.88, 0.59)));
     float traceB = 1.0 - smoothstep(0.006, 0.026, sdSegment(vUv, vec2(0.22, 0.70), vec2(0.76, 0.34)));
     float traceC = 1.0 - smoothstep(0.006, 0.030, sdSegment(vUv, vec2(0.18, 0.43), vec2(0.58, 0.48)));
-    float tracePulse = 0.76 + sin(uTime * 0.58 + vUv.x * 7.0) * 0.24;
+    float chainPulse = 0.70 + sin(uTime * 0.58 + vUv.x * 7.0 + phase) * 0.30;
     float traceNodes =
       (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.13, 0.30)))) +
       (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.88, 0.59)))) +
       (1.0 - smoothstep(0.010, 0.034, length(vUv - vec2(0.58, 0.48))));
-    col += vec3(0.92, 0.90, 0.84) * (traceA * 0.135 + traceB * 0.070 + traceC * 0.052) * causalTrace * tracePulse;
-    col += vec3(0.98, 0.96, 0.88) * traceNodes * causalTrace * 0.052;
+    col += vec3(0.92, 0.90, 0.84) * (traceA * 0.135 + traceB * 0.070 + traceC * 0.052) * causal * chainPulse;
+    col += vec3(0.98, 0.96, 0.88) * traceNodes * causal * 0.052;
 
-    float recursion = smoothstep(1.85, 2.25, phase)
-                    * (1.0 - smoothstep(3.10, 3.55, phase));
+    float feedback = recursion;
     vec2 loopUv = (vUv - vec2(0.5)) * vec2(1.0, 1.55);
     float loopRadius = length(loopUv);
     float loopAngle = atan(loopUv.y, loopUv.x);
@@ -173,20 +233,22 @@ const slabFrag = /* glsl */ `
     float innerLoop = 1.0 - smoothstep(0.006, 0.025, abs(loopRadius - (0.185 - loopWave * 0.55)));
     float loopGap = smoothstep(-0.30, 0.56, sin(loopAngle + uTime * 0.30));
     float loopHead = exp(-abs(sin(loopAngle - uTime * 0.38)) * 10.0);
-    col += vec3(0.92, 0.90, 0.84) * loopLine * loopGap * recursion * 0.135;
-    col += vec3(0.78, 0.77, 0.72) * innerLoop * (1.0 - loopGap * 0.55) * recursion * 0.070;
-    col += vec3(1.00, 0.98, 0.90) * loopHead * loopLine * recursion * 0.048;
+    float loopRing = 1.0 - smoothstep(0.006, 0.026, abs(loopRadius - (0.255 + loopWave * 0.42)));
+    col += vec3(0.92, 0.90, 0.84) * loopLine * loopGap * feedback * 0.135;
+    col += vec3(0.78, 0.77, 0.72) * innerLoop * (1.0 - loopGap * 0.55) * feedback * 0.070;
+    col += vec3(1.00, 0.98, 0.90) * loopHead * loopLine * feedback * 0.048;
+    col += vec3(0.96, 0.95, 0.89) * loopRing * feedback * 0.035;
 
-    float selfRef = smoothstep(2.82, 3.12, phase)
-                  * (1.0 - smoothstep(3.72, 4.05, phase));
     float mirrorLine = 1.0 - smoothstep(0.002, 0.014, abs(vUv.x - 0.5));
     float mirrorEcho = 1.0 - smoothstep(0.012, 0.060, abs(vUv.x - (1.0 - vUv.y * 0.18 - 0.41)));
     float lens = exp(-length((vUv - vec2(0.5, 0.52)) * vec2(1.4, 0.85)) * 3.2);
+    vec2 mirrorTrace = vec2(1.0 - vUv.y, vUv.x);
+    float feedbackBand = 1.0 - smoothstep(0.008, 0.020, length(vUv - mirrorTrace));
     col += vec3(0.98, 0.96, 0.88) * mirrorLine * selfRef * 0.064;
     col += vec3(0.78, 0.77, 0.72) * mirrorEcho * lens * selfRef * 0.082;
+    col += vec3(0.96, 0.94, 0.88) * feedbackBand * selfRef * 0.030;
     col -= vec3(0.12, 0.12, 0.11) * selfRef * lens * 0.040;
 
-    float rebuild = smoothstep(3.50, 3.98, phase);
     float settle = smoothstep(0.0, 1.0, uStageProgress);
     vec2 n1 = mix(vec2(0.21, 0.31), vec2(0.25, 0.25), settle);
     vec2 n2 = mix(vec2(0.39, 0.66), vec2(0.36, 0.58), settle);
@@ -207,6 +269,8 @@ const slabFrag = /* glsl */ `
       (1.0 - smoothstep(0.010, 0.032, length(vUv - n5)));
     col += vec3(0.88, 0.87, 0.80) * network * rebuild * 0.080;
     col += vec3(1.00, 0.97, 0.88) * nodes * rebuild * 0.105;
+    col += vec3(0.94, 0.90, 0.85) * grid(vUv + vec2(0.012, -0.008) * phase, 0.13) * rebuild * 0.020;
+    col += vec3(0.98, 0.94, 0.86) * settle * 0.032 * grid(vUv, 0.28) * rebuild;
     col *= 1.0 + stageDepth * 0.035;
     col = clamp(col, vec3(0.0), vec3(1.0));
 
@@ -302,6 +366,7 @@ interface SlabUniforms {
   uStageProgress: { value: number };
   uScrollVelocity: { value: number };
   uMouse: { value: THREE.Vector2 };
+  uInertia: { value: number };
 }
 
 interface SlabMeshProps {
@@ -345,14 +410,18 @@ function SlabMesh({
       p.vel.x *= inv;
       p.vel.y *= inv;
     }
+    const inertia = Math.min(1, speed / maxV);
 
     p.pos.x += p.vel.x;
     p.pos.y += p.vel.y;
     p.pos.y = Math.max(-0.55, Math.min(0.88, p.pos.y));
 
+    const scene = sceneStateRef.current;
+    const stage = scene.stageIndex;
+    const stageProgress = scene.stageProgress;
+
     if (slabRef.current) {
-      const scene = sceneStateRef.current;
-      const pose = getStagePose(scene.stageIndex, scene.stageProgress);
+      const pose = getStagePose(stage, stageProgress);
       const compactScale = isCompact ? 0.92 : 1;
       const velocity = THREE.MathUtils.clamp(scene.scrollVelocity, -1.35, 1.35);
       const velocityAbs = Math.abs(velocity);
@@ -369,16 +438,16 @@ function SlabMesh({
     }
     if (slabMatRef.current) {
       slabMatRef.current.uniforms.uMouse.value.set(p.pos.x * 1.6, p.pos.y * 1.6);
+      slabMatRef.current.uniforms.uInertia.value = prefersReducedMotion ? 0 : inertia;
     }
     /* uTime is always updated so the slab shader keeps animating */
     if (slabMatRef.current) {
-      const scene = sceneStateRef.current;
       slabMatRef.current.uniforms.uTime.value = prefersReducedMotion
         ? 0
         : clock.getElapsedTime();
       slabMatRef.current.uniforms.uScrollProgress.value = scene.scrollProgress;
-      slabMatRef.current.uniforms.uStageIndex.value = scene.stageIndex;
-      slabMatRef.current.uniforms.uStageProgress.value = scene.stageProgress;
+      slabMatRef.current.uniforms.uStageIndex.value = stage;
+      slabMatRef.current.uniforms.uStageProgress.value = stageProgress;
       slabMatRef.current.uniforms.uScrollVelocity.value = scene.scrollVelocity;
     }
 
@@ -392,7 +461,7 @@ function SlabMesh({
       rotation={[REST_TILT_Y, 0, 0]}
       scale={slabScale}
     >
-      <boxGeometry args={[4.2, 0.035, 2.6, 1, 1, 1]} />
+      <boxGeometry args={[4.2, 0.035, 2.6, 32, 1, 18]} />
       <shaderMaterial
         ref={slabMatRef}
         vertexShader={slabVert}
@@ -431,6 +500,7 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
       uStageProgress: { value: 0 },
       uScrollVelocity: { value: 0 },
       uMouse: { value: new THREE.Vector2(0, 0) },
+      uInertia: { value: 0 },
     }),
     []
   );

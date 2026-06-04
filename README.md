@@ -1,6 +1,6 @@
 # Spatial — 递归智能界面
 
-一个中文、空间化的 AI-native 个人主页。页面不是简历站，也不是项目索引；它用长滚动、固定 WebGL 画布、惯性和短句叙事表达五个阶段：观察、因果、递归、自指、重构。
+一个中文为主、保留一句英文 thesis 的空间化 AI-native 个人主页。页面不是简历站，也不是项目索引；它用长滚动、固定 WebGL 画布、惯性和短句叙事表达五个阶段：观察、因果、递归、自指、重构。
 
 Tech stack: **Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · Three.js / @react-three/fiber**
 
@@ -11,7 +11,7 @@ Tech stack: **Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · Three.j
 ```
 static-25d-hero/
 ├── app/
-│   ├── globals.css       # Tailwind v4 @theme, narrative layout, CTA, responsive rules
+│   ├── globals.css       # Tailwind v4 @theme, narrative layout, signals, CTA, responsive rules
 │   ├── layout.tsx        # Chinese metadata, dark root layout
 │   └── page.tsx          # Renders the homepage
 ├── src/components/
@@ -45,9 +45,9 @@ static-25d-hero/
 
 No UI kit. Tailwind v4 remains the design-system layer.
 
-### Target interaction stack
+### Interaction stack status
 
-The next optimization phase should add the interaction libraries below deliberately, not as decoration:
+The implementation currently uses one custom interaction stack in `Hero.tsx` + `WebGLSlab.tsx` (rAF + mutable refs + stage mapping). The libraries below are **not installed yet** and are only planned follow-up options.
 
 | Package | Status | Intended role |
 |---------|--------|---------------|
@@ -57,7 +57,7 @@ The next optimization phase should add the interaction libraries below deliberat
 | `motion` | Planned | UI micro-interactions: entrance, hover, layout transitions |
 | `zustand` | Planned | Shared scroll/mouse/viewport/scene-mode state across DOM and R3F |
 
-Current code still uses a custom rAF loop and mutable refs for scroll and pointer state. Do not document the planned stack as implemented until dependencies are installed and the architecture is migrated.
+Current code still uses a custom rAF loop and mutable refs for scroll and pointer state.
 
 `InteractionState` in `src/lib/interaction.ts` describes the future shared source state shape. `SceneState` is the current WebGL render state passed from `Hero.tsx` to `WebGLSlab.tsx`; it stores damped scroll progress, stage index, eased stage progress, and scroll velocity.
 
@@ -66,12 +66,12 @@ Current code still uses a custom rAF loop and mutable refs for scroll and pointe
 ## Commands
 
 ```bash
-npm run dev      # Next.js dev server → http://localhost:3000
-npm test         # Node test runner → interaction helper regression tests
-npm run typecheck # TypeScript strict check
-npm run lint     # TypeScript static check; no separate ESLint config yet
-npm run build    # TypeScript check + static build → ./out/
-npm run start    # Serve the built output
+npm run dev        # Next.js dev server → http://localhost:3000
+npm test           # Node test runner → interaction helper regression tests
+npm run typecheck  # TypeScript strict check
+npm run lint       # TypeScript noEmit check (no dedicated ESLint config in this repo)
+npm run build      # Static export build → ./out/
+npm run start      # Serve the built output
 ```
 
 ---
@@ -84,22 +84,13 @@ There is one WebGL focal object: the slab. Its shader and pose are stage-aware:
 
 | Stage | HTML narrative | WebGL expression |
 |-------|----------------|------------------|
-| 观察 | Centered thesis | Stable slab, quiet room |
-| 因果 | Left-weighted copy | Low-contrast trace lines and nodes |
-| 递归 | Right-weighted copy | Slow loop light paths |
-| 自指 | Narrow centered copy | Mirror line and self-reference echo |
-| 重构 | Lower-left final section | Small network re-layout on the slab |
+| 观察 | Centered thesis | Baseline pose + inertia-driven sweep + slab ambient grid |
+| 因果 | 左侧重心 | `slabFrag` 中低对比 trace node 串联，`STAGE_POSES` 横向偏移 |
+| 递归 | 右侧重心 | `slabFrag` 中闭合环状光路（recursion loop）+ `STAGE_POSES` 的偏移与比例变化 |
+| 自指 | 中央收束 | `slabFrag` 中镜面线与偏置映射回声 + 轻微俯仰偏移 |
+| 重构 | 下左收束 | `slabFrag` 的重排节点网络 + `STAGE_POSES` 细微缩放和姿态重置 |
 
-The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narrative sections. Background and slab rendering live in `WebGLSlab.tsx`.
-
-## Optimization plan
-
-1. **State layer:** introduce a small Zustand store for `scrollProgress`, `scrollVelocity`, `mouse`, `viewport`, and `sceneMode`. `Hero.tsx` and `WebGLSlab.tsx` should read the same state instead of exchanging ad hoc mutable refs.
-2. **Scroll layer:** replace direct `window.scrollY` sampling with Lenis. Lenis should drive normalized progress and velocity, while respecting reduced motion and native browser accessibility.
-3. **Timeline layer:** use GSAP ScrollTrigger for section pinning, scrubbed progress, and stage transitions. ScrollTrigger owns narrative timing; it should write semantic progress into Zustand, not directly mutate every component.
-4. **Physics layer:** wrap the slab or its internal interaction body with `@react-three/rapier`. Use rigid-body inertia and collision only where it supports the story. No bouncing spectacle, no game-like flipping.
-5. **UI motion layer:** use Motion for text entrance, CTA feedback, and small layout transitions. Do not animate scroll-driven text with both JS frame writes and CSS transitions on the same properties.
-6. **Visual composition:** keep foreground narrative copy, midground interactive WebGL slab, and background atmospheric field clearly separated. The slab remains the single narrative object, not a decorative prop.
+The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narrative sections. Background and slab rendering live in one `WebGLSlab.tsx` scene (`BgQuad` + `SlabMesh`).
 
 ---
 

@@ -232,13 +232,13 @@ export default function Hero() {
         const viewportH = Math.max(window.innerHeight, 1);
         const travel = Math.max(rect.height + viewportH, 1);
         const sectionProgress = clamp((viewportH - rect.top) / travel, 0, 1);
-        const enter = smoothstep(0.08, 0.28, sectionProgress);
-        const exit = 1 - smoothstep(0.72, 0.92, sectionProgress);
+        const enter = smoothstep(0.16, 0.34, sectionProgress);
+        const exit = 1 - smoothstep(0.66, 0.86, sectionProgress);
         const presence = enter * exit;
         const direction = sectionProgress < 0.5 ? 1 : -1;
         const inner = section.querySelector<HTMLElement>(".narrative-section-inner");
 
-        section.dataset.active = presence >= 0.5 ? "true" : "false";
+        section.dataset.active = presence >= 0.58 ? "true" : "false";
 
         if (inner) {
           const quiet = 1 - presence;
@@ -281,6 +281,7 @@ export default function Hero() {
 
     const onScroll = () => {
       scrollYRef.current = window.scrollY;
+      updateScrollState();
     };
     onScroll();
     updateScrollState();
@@ -291,6 +292,7 @@ export default function Hero() {
       const previous = lastFrameAtRef.current || now;
       const dt = clamp((now - previous) / 1000, 0.001, 0.05);
       lastFrameAtRef.current = now;
+      scrollYRef.current = window.scrollY;
 
       const t = 0.055;
       currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
@@ -376,7 +378,7 @@ export default function Hero() {
           />
         </span>
         <span className="ml-[10px]" style={{ color: "#EDE9E3", fontStyle: "normal" }}>
-          Spatial
+          noobli
         </span>
       </header>
 
@@ -398,7 +400,7 @@ export default function Hero() {
           gap: "12px",
         }}
       >
-        <span>Q3 / 26</span>
+        <span>former frontend</span>
         <span
           style={{
             width: "1px",
@@ -407,7 +409,7 @@ export default function Hero() {
             display: "inline-block",
           }}
         />
-        <span>11° 04′ N</span>
+        <span>AI-native interface</span>
       </div>
 
       {/* ── WebGL architectural slab ───────────────── */}

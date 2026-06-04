@@ -365,6 +365,12 @@ body {
     text-align: center;
   }
 
+  .narrative-section--reconstruction .narrative-section-inner {
+    justify-content: flex-start;
+    padding-top: clamp(112px, 18svh, 148px);
+    padding-bottom: 0;
+  }
+
   .narrative-section--causality .narrative-body,
   .narrative-section--recursion .narrative-body,
   .narrative-section--reconstruction .narrative-body {

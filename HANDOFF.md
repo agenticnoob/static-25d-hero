@@ -85,6 +85,12 @@ The scroll model was changed after the user reported that the interaction felt s
 
 `README.md`, `DESIGN.md`, and this handoff were updated to match the current architecture, stage system, canvas sizing rule, reduced-motion expectations, and target motion stack.
 
+### 8. Chinese Visual QA And Mobile Reconstruction Fix
+
+A browser QA pass was completed at desktop and 360px mobile widths. The WebGL canvas wrapper stayed fixed, all five stages activated in order, and no horizontal overflow was observed.
+
+The mobile reconstruction stage had one visual issue: the final copy and CTA sat too close to the bright slab region. `app/globals.css` now moves only the mobile reconstruction copy to the upper third of the viewport, leaving the slab as the single lower focal object.
+
 ## Key Files
 
 - `app/page.tsx` - renders `<Hero />`
@@ -159,7 +165,7 @@ GIT_SSH_COMMAND='ssh -p 443 -o HostName=ssh.github.com' git push origin main
 
 ## Suggested Next Iteration
 
-Make the next iteration architectural, not tiny parameter tuning:
+The immediate next step is narrative rhythm: quiet inactive sections further and keep each viewport focused on one clear idea. After that, make the next interaction iteration architectural rather than tiny parameter tuning:
 
 1. Introduce the shared interaction store.
    - Install and wire Zustand.

@@ -5,6 +5,8 @@ import {
   useMemo,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Float, PerspectiveCamera } from "@react-three/drei";
+import { Physics, RigidBody, CuboidCollider } from "@react-three/rapier";
 import * as THREE from "three";
 import type { SceneState } from "@/lib/interaction";
 
@@ -304,6 +306,10 @@ function smoothstep01(value: number): number {
   return t * t * (3 - 2 * t);
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 function getStagePose(stageIndex: number, stageProgress: number) {
   const current = STAGE_POSES[Math.max(0, Math.min(STAGE_POSES.length - 1, Math.floor(stageIndex)))] ?? STAGE_POSES[0];
   const next = STAGE_POSES[Math.max(0, Math.min(STAGE_POSES.length - 1, Math.floor(stageIndex) + 1))] ?? current;
@@ -386,6 +392,7 @@ function SlabMesh({
 }: SlabMeshProps) {
   const slabRef    = useRef<THREE.Mesh>(null);
   const slabMatRef = useRef<THREE.ShaderMaterial>(null);
+  const slabBodyRef = useRef<any>(null);
   const { viewport } = useThree();
   const slabScale = Math.min(0.58, Math.max(0.38, (viewport.width / 4.2) * 0.62));
   const isCompact = viewport.width < 4;
@@ -420,10 +427,51 @@ function SlabMesh({
     const stage = scene.stageIndex;
     const stageProgress = scene.stageProgress;
 
+    const body = slabBodyRef.current;
+    const pose = getStagePose(stage, stageProgress);
+    const compactScale = isCompact ? 0.92 : 1;
+    const velocity = THREE.MathUtils.clamp(scene.scrollVelocity, -1.35, 1.35);
+    const velocityAbs = Math.abs(velocity);
+
+    if (body) {
+      const target = {
+        x: (pose.x + velocity * 0.045) * compactScale,
+        y: slabY + pose.y + velocityAbs * 0.018,
+        z: pose.z - velocityAbs * 0.055,
+      };
+
+      const translation = body.translation ? body.translation() : { x: target.x, y: target.y, z: target.z };
+      const impulse = {
+        x: (target.x - (translation?.x ?? target.x)) * 0.35,
+        y: (target.y - (translation?.y ?? target.y)) * 0.35,
+        z: (target.z - (translation?.z ?? target.z)) * 0.35,
+      };
+
+      if (body.applyImpulse) {
+        body.applyImpulse(impulse, true);
+      }
+
+      const linvel = body.linvel ? body.linvel() : { x: 0, y: 0, z: 0 };
+      if (body.setLinvel) {
+        const maxV = 0.24;
+        body.setLinvel(
+          {
+            x: clamp(linvel.x, -maxV, maxV),
+            y: clamp(linvel.y, -maxV, maxV),
+            z: clamp(linvel.z, -maxV, maxV),
+          },
+          true
+        );
+      }
+
+      if (slabRef.current && translation) {
+        slabRef.current.position.set(translation.x, translation.y, translation.z);
+      }
+    } else if (slabRef.current) {
+      slabRef.current.position.set(0, slabY, 0);
+    }
+
     if (slabRef.current) {
-      const pose = getStagePose(stage, stageProgress);
-      const compactScale = isCompact ? 0.92 : 1;
-      const velocity = THREE.MathUtils.clamp(scene.scrollVelocity, -1.35, 1.35);
       const velocityAbs = Math.abs(velocity);
 
       slabRef.current.position.x = (pose.x + velocity * 0.045) * compactScale;
@@ -455,21 +503,35 @@ function SlabMesh({
   });
 
   return (
-    <mesh
-      ref={slabRef}
+    <RigidBody
+      ref={slabBodyRef}
+      type="dynamic"
       position={[0, slabY, 0]}
-      rotation={[REST_TILT_Y, 0, 0]}
-      scale={slabScale}
+      mass={1.2}
+      colliders={false}
+      linearDamping={4}
+      angularDamping={8}
+      restitution={0.22}
+      friction={0.8}
+      canSleep={false}
     >
-      <boxGeometry args={[4.2, 0.035, 2.6, 32, 1, 18]} />
-      <shaderMaterial
-        ref={slabMatRef}
-        vertexShader={slabVert}
-        fragmentShader={slabFrag}
-        uniforms={slabUniforms}
-        side={THREE.DoubleSide}
-      />
-    </mesh>
+      <CuboidCollider args={[slabScale * 2.02, 0.02, slabScale * 1.35]} />
+      <mesh
+        ref={slabRef}
+        position={[0, slabY, 0]}
+        rotation={[REST_TILT_Y, 0, 0]}
+        scale={slabScale}
+      >
+        <boxGeometry args={[4.2, 0.035, 2.6, 32, 1, 18]} />
+        <shaderMaterial
+          ref={slabMatRef}
+          vertexShader={slabVert}
+          fragmentShader={slabFrag}
+          uniforms={slabUniforms}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </RigidBody>
   );
 }
 
@@ -530,7 +592,6 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
       <Canvas
         dpr={dpr}
         frameloop="always"
-        camera={{ position: [0, 2.0, 5.2], fov: 42, near: 0.1, far: 100 }}
         gl={{
           antialias: !isTouch.current,
           alpha: true,
@@ -544,6 +605,7 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
         }}
         onCreated={({ invalidate: inv }) => { invalidateRef.current = inv; }}
       >
+        <PerspectiveCamera makeDefault position={[0, 2.0, 5.2]} fov={42} near={0.1} far={100} />
         <ambientLight intensity={0.4} color="#1a2030" />
         <directionalLight position={[3, 6, 4]} intensity={0.6} color="#c8d8f0" />
         <pointLight position={[0, -2, 2]} intensity={0.08} color="#2040a0" />
@@ -551,13 +613,55 @@ export default function WebGLSlab({ physRef, sceneStateRef }: WebGLSlabProps) {
         {/* NDC fullscreen background quad — fixed, no perspective */}
         <BgQuad />
 
-        <SlabMesh
-          slabUniforms={slabUniforms}
-          physRef={physRef}
-          sceneStateRef={sceneStateRef}
-          invalidateRef={invalidateRef}
-          prefersReducedMotion={prefersReducedMotion.current}
-        />
+        <Physics
+          gravity={[0, -30, 0]}
+          timeStep={1 / 60}
+          paused={false}
+        >
+          <RigidBody
+            type="fixed"
+            position={[0, -0.9, 0]}
+            colliders={false}
+            restitution={0.1}
+            friction={1.2}
+          >
+            <CuboidCollider args={[8.8, 0.22, 4]} />
+          </RigidBody>
+
+          <RigidBody
+            type="fixed"
+            position={[-2.35, 0, 0]}
+            colliders={false}
+            restitution={0.15}
+            friction={1.2}
+          >
+            <CuboidCollider args={[0.06, 2, 4]} />
+          </RigidBody>
+
+          <RigidBody
+            type="fixed"
+            position={[2.35, 0, 0]}
+            colliders={false}
+            restitution={0.15}
+            friction={1.2}
+          >
+            <CuboidCollider args={[0.06, 2, 4]} />
+          </RigidBody>
+
+          <Float
+            speed={0.9}
+            rotationIntensity={0.0}
+            floatIntensity={0}
+          >
+            <SlabMesh
+              slabUniforms={slabUniforms}
+              physRef={physRef}
+              sceneStateRef={sceneStateRef}
+              invalidateRef={invalidateRef}
+              prefersReducedMotion={prefersReducedMotion.current}
+            />
+          </Float>
+        </Physics>
       </Canvas>
     </div>
   );

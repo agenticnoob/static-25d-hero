@@ -2,16 +2,20 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Lenis from "@studio-freight/lenis";
 import { homepageSections } from "@/content/homepage";
 import {
   getCinematicScrollStage,
   getStageIndex,
 } from "@/lib/interaction";
+import { useHeroStore } from "@/lib/heroStore";
 import WebGLSlab from "./WebGLSlab";
 import NarrativeSection from "./NarrativeSection";
 
 /* ─────────────────────────────────────────────────────────────────
-   Entrance animation — staggered fade + translate
+   Entrance animation
    ───────────────────────────────────────────────────────────────── */
 
 const ENTRANCE_ELEMENTS = [
@@ -32,36 +36,23 @@ const ENTRANCE_DELAYS: Record<string, number> = {
   ".cta-row": 0.82,
 };
 
-/* ─────────────────────────────────────────────────────────────────
-   Parallax calibration
-   ─────────────────────────────────────────────────────────────────
-   Desktop:
-     Background  : 0.8px / 0.6px  — low amplitude, mouse-driven
-     WebGL slab  : R3F stage pose via sceneStateRef
-                   + physics rotation via physRef (also mouse-driven)
-     Title       : -0.3px / -0.2px — subtle counter-parallax, mouse-driven
-     Eyebrow / Subtitle / CTA: ZERO parallax (text must stay legible)
-   Mobile:
-     Background  : 0.3px / 0.2px  — reduced
-     Title        : 0 (disabled on touch)
-   ───────────────────────────────────────────────────────────────── */
+const TITLE_TX = -0.3;
+const TITLE_TY = -0.2;
 
-const TITLE_TX   = -0.3;
-const TITLE_TY   = -0.2;
-
-/* Scroll → WebGL time axis */
 const SCROLL_FOLLOW = 0.085;
 const SCROLL_VELOCITY_DAMPING = 0.82;
 const SCROLL_VELOCITY_LIMIT = 1.35;
+const PHYS_REST_Y = 0.18;
 
-/* Mouse → WebGL physics (physRef) */
-const PHYS_REST_Y  = 0.18;
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
 
-function lerp(a: number, b: number, t: number): number {
+function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function smoothstep(edge0: number, edge1: number, value: number): number {
+function smoothstep(edge0: number, edge1: number, value: number) {
   const x = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
   return x * x * (3 - 2 * x);
 }
@@ -88,25 +79,22 @@ function cancelFrame(id: number) {
    ───────────────────────────────────────────────────────────────── */
 
 export default function Hero() {
-  /* ── Refs ─────────────────────────────────────────────── */
-  const titleRef  = useRef<HTMLHeadingElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const sectionsRef = useRef<HTMLElement[]>([]);
+
   const slabPhysRef = useRef<{
-    pos:    THREE.Vector2;
-    vel:    THREE.Vector2;
+    pos: THREE.Vector2;
+    vel: THREE.Vector2;
     target: THREE.Vector2;
     active: boolean;
   }>({
-    pos:    new THREE.Vector2(0, PHYS_REST_Y),
-    vel:    new THREE.Vector2(0, 0),
+    pos: new THREE.Vector2(0, PHYS_REST_Y),
+    vel: new THREE.Vector2(0, 0),
     target: new THREE.Vector2(0, PHYS_REST_Y),
     active: false,
   });
 
-  const scrollYRef     = useRef(0);
-  const scrollProgressRef = useRef(0);
-  const scrollVisualProgressRef = useRef(0);
-  const scrollVelocityRef = useRef(0);
   const sceneStateRef = useRef({
     rawScrollProgress: 0,
     scrollProgress: 0,
@@ -115,31 +103,39 @@ export default function Hero() {
     scrollVelocity: 0,
   });
 
-  const mouseRef   = useRef({ x: 0, y: 0 });
-  const currentRef = useRef({ x: 0, y: 0 });
+  const scrollYRef = useRef(0);
+  const scrollProgressRef = useRef(0);
+  const scrollVisualProgressRef = useRef(0);
+  const scrollVelocityRef = useRef(0);
 
-  const rafRef = useRef<number>(0);
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const currentRef = useRef({ x: 0, y: 0 });
+  const isTouchDevice = useRef(false);
+
+  const rafRef = useRef(0);
   const lastFrameAtRef = useRef(0);
 
-  const isTouchDevice = useRef(false);
+  const setPointerTarget = useHeroStore((state) => state.setPointerTarget);
+  const setPointerCurrent = useHeroStore((state) => state.setPointerCurrent);
+  const setPointerActive = useHeroStore((state) => state.setPointerActive);
+  const setSceneState = useHeroStore((state) => state.setSceneState);
+  const setSceneMode = useHeroStore((state) => state.setSceneMode);
+  const setTouchDevice = useHeroStore((state) => state.setTouchDevice);
+  const setReducedMotion = useHeroStore((state) => state.setPrefersReducedMotion);
+  const setViewport = useHeroStore((state) => state.setViewport);
 
   /* ── Entrance animation ──────────────────────────────── */
   const hasRun = useRef(false);
   useEffect(() => {
     if (typeof window === "undefined" || hasRun.current) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    hasRun.current = true;
-
     isTouchDevice.current =
       window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
       "ontouchstart" in window;
 
-    if (
-      prefersReduced ||
-      isTouchDevice.current ||
-      typeof window.requestAnimationFrame !== "function"
-    ) {
-      // Skip entrance on touch or timing-constrained browsers.
+    hasRun.current = true;
+
+    if (prefersReduced || isTouchDevice.current || typeof window.requestAnimationFrame !== "function") {
       ENTRANCE_ELEMENTS.forEach((selector) => {
         const el = document.querySelector(selector) as HTMLElement | null;
         if (!el) return;
@@ -167,69 +163,80 @@ export default function Hero() {
     });
   }, []);
 
-  /* ── Unified rAF parallax + physics loop ─────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    gsap.registerPlugin(ScrollTrigger);
 
-    const clamp = (v: number, min: number, max: number) =>
-      Math.max(min, Math.min(max, v));
+    isTouchDevice.current =
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
+      "ontouchstart" in window;
 
-    const isTouch = isTouchDevice.current;
+    setTouchDevice(isTouchDevice.current);
+    setReducedMotion(prefersReduced);
+    setViewport({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      isTouch: isTouchDevice.current,
+      dpr: isTouchDevice.current ? 1 : 2,
+    });
+
     sectionsRef.current = Array.from(
-      document.querySelectorAll<HTMLElement>(".narrative-section")
+      heroRef.current?.querySelectorAll<HTMLElement>(".narrative-section") ?? []
     );
 
-    /* Mouse tracking — desktop */
-    const onMove = (e: PointerEvent) => {
-      mouseRef.current.x = clamp((e.clientX / window.innerWidth) * 2 - 1, -1, 1);
-      mouseRef.current.y = clamp((e.clientY / window.innerHeight) * 2 - 1, -1, 1);
+    const clamp01 = (value: number) => clamp(value, 0, 1);
+
+    const onPointerMove = (event: PointerEvent) => {
+      mouseRef.current.x = clamp((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
+      mouseRef.current.y = clamp((event.clientY / window.innerHeight) * 2 - 1, -1, 1);
       slabPhysRef.current.active = true;
+      setPointerActive(true);
+      setPointerTarget(mouseRef.current);
     };
-    const onLeave = () => {
+
+    const onPointerLeave = () => {
       mouseRef.current.x = 0;
       mouseRef.current.y = 0;
       slabPhysRef.current.active = false;
+      setPointerActive(false);
+      setPointerTarget(mouseRef.current);
     };
 
-    /* Touch tracking — mobile */
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 0) return;
-      const touch = e.touches[0];
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length === 0) return;
+      const touch = event.touches[0];
       mouseRef.current.x = clamp((touch.clientX / window.innerWidth) * 2 - 1, -1, 1);
       mouseRef.current.y = clamp((touch.clientY / window.innerHeight) * 2 - 1, -1, 1);
       slabPhysRef.current.active = true;
+      setPointerActive(true);
+      setPointerTarget(mouseRef.current);
     };
+
     const onTouchEnd = () => {
       mouseRef.current.x = 0;
       mouseRef.current.y = 0;
       slabPhysRef.current.active = false;
+      setPointerActive(false);
+      setPointerTarget(mouseRef.current);
     };
 
     if (prefersReduced) {
       slabPhysRef.current.active = false;
-    } else if (isTouch) {
+    } else if (isTouchDevice.current) {
       window.addEventListener("touchmove", onTouchMove, { passive: true });
       window.addEventListener("touchend", onTouchEnd, { passive: true });
     } else {
-      window.addEventListener("pointermove", onMove, { passive: true });
-      window.addEventListener("pointerleave", onLeave);
-      window.addEventListener("blur", onLeave);
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
+      window.addEventListener("pointerleave", onPointerLeave);
+      window.addEventListener("blur", onPointerLeave);
     }
 
-    const updateScrollState = () => {
-      const maxScroll = Math.max(
-        document.documentElement.scrollHeight - window.innerHeight,
-        1
-      );
-      scrollProgressRef.current = clamp(
-        scrollYRef.current / maxScroll,
-        0,
-        1
-      );
+    const updatePresence = () => {
+      const viewportH = Math.max(window.innerHeight, 1);
       sectionsRef.current.forEach((section) => {
         const rect = section.getBoundingClientRect();
-        const viewportH = Math.max(window.innerHeight, 1);
         const travel = Math.max(rect.height + viewportH, 1);
         const sectionProgress = clamp((viewportH - rect.top) / travel, 0, 1);
         const enter = smoothstep(0.16, 0.34, sectionProgress);
@@ -242,113 +249,211 @@ export default function Hero() {
 
         if (inner) {
           const quiet = 1 - presence;
-          inner.style.opacity = presence > 0.06 ? (0.12 + presence * 0.88).toFixed(3) : "0";
+          const scale = 0.992 + presence * 0.008;
+          inner.style.opacity = presence > 0.06 ? `${0.12 + presence * 0.88}` : "0";
           inner.style.filter = `blur(${(quiet * 1.35).toFixed(2)}px)`;
           inner.style.transform =
-            `translate3d(0, ${((quiet * 18 * direction)).toFixed(2)}px, 0) scale(${(0.992 + presence * 0.008).toFixed(3)})`;
+            `translate3d(0, ${((quiet * 18 * direction)).toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
         }
       });
     };
 
-    const syncSceneState = (dt: number) => {
-      const raw = scrollProgressRef.current;
-      const before = scrollVisualProgressRef.current;
+    const syncSceneState = (raw: number, rawVelocity: number) => {
+      const clampedRaw = clamp01(raw);
       const follow = prefersReduced ? 1 : SCROLL_FOLLOW;
-      const visual = lerp(before, raw, follow);
-      const instantVelocity = dt > 0 ? (visual - before) / dt : 0;
+      const cinematic = getCinematicScrollStage(clamp01(
+        lerp(scrollVisualProgressRef.current, clampedRaw, follow)
+      ));
+
+      const nextVisual = clamp01(lerp(scrollVisualProgressRef.current, clampedRaw, follow));
+      scrollVisualProgressRef.current = nextVisual;
       const nextVelocity = lerp(
         scrollVelocityRef.current * SCROLL_VELOCITY_DAMPING,
-        instantVelocity,
+        rawVelocity,
         0.22
       );
-      const cinematicStage = getCinematicScrollStage(visual);
 
-      scrollVisualProgressRef.current = visual;
+      scrollProgressRef.current = clampedRaw;
+      sceneStateRef.current = {
+        rawScrollProgress: clampedRaw,
+        scrollProgress: nextVisual,
+        stageIndex: getStageIndex(cinematic.stage),
+        stageProgress: cinematic.stageProgress,
+        scrollVelocity: prefersReduced ? 0 : nextVelocity,
+      };
       scrollVelocityRef.current = clamp(
         nextVelocity,
         -SCROLL_VELOCITY_LIMIT,
         SCROLL_VELOCITY_LIMIT
       );
 
-      sceneStateRef.current.rawScrollProgress = raw;
-      sceneStateRef.current.scrollProgress = visual;
-      sceneStateRef.current.stageIndex = getStageIndex(cinematicStage.stage);
-      sceneStateRef.current.stageProgress = cinematicStage.stageProgress;
-      sceneStateRef.current.scrollVelocity = prefersReduced
-        ? 0
-        : scrollVelocityRef.current;
+      setSceneState({
+        rawScrollProgress: clampedRaw,
+        scrollProgress: nextVisual,
+        stageIndex: getStageIndex(cinematic.stage),
+        stageProgress: cinematic.stageProgress,
+        scrollVelocity: prefersReduced ? 0 : scrollVelocityRef.current,
+      });
+      setSceneMode(cinematic.stage);
+
+      if (isTouchDevice.current && sectionsRef.current.length > 0) {
+        const index = Math.round(cinematic.stageProgress + getStageIndex(cinematic.stage));
+        if (index >= 0 && index < homepageSections.length) {
+          setSceneMode(homepageSections[index].stage);
+        }
+      }
     };
 
-    const onScroll = () => {
-      scrollYRef.current = window.scrollY;
-      updateScrollState();
+    const onResize = () => {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        isTouch: isTouchDevice.current,
+        dpr: isTouchDevice.current ? 1 : 2,
+      });
     };
-    onScroll();
-    updateScrollState();
-    window.addEventListener("scroll", onScroll, { passive: true });
 
-    /* ── RAF loop ─────────────────────────────────────── */
-    const tick = (now: number) => {
-      const previous = lastFrameAtRef.current || now;
-      const dt = clamp((now - previous) / 1000, 0.001, 0.05);
-      lastFrameAtRef.current = now;
-      scrollYRef.current = window.scrollY;
+    window.addEventListener("resize", onResize);
 
+    const lenis = new (Lenis as any)({
+      duration: prefersReduced ? 1 : 1.12,
+      touchMultiplier: 1.2,
+      infinite: false,
+    }) as unknown as Lenis;
+    let latestScroll = window.scrollY;
+
+    const scroller = document.scrollingElement || document.documentElement;
+    ScrollTrigger.scrollerProxy(scroller as HTMLElement, {
+      scrollTop(value?: number) {
+        if (typeof value === "number") {
+          (lenis as any).scrollTo(value, { immediate: true });
+          latestScroll = value;
+          return value;
+        }
+        return latestScroll;
+      },
+      getBoundingClientRect() {
+        return {
+          top: 0,
+          left: 0,
+          width: window.innerWidth,
+          height: window.innerHeight,
+        };
+      },
+      pinType: scroller !== null && (scroller as HTMLElement).style.transform ? "transform" : "fixed",
+    });
+
+    const handleLenis = (event: { scroll: number; velocity?: number }) => {
+      latestScroll = event.scroll;
+      scrollYRef.current = latestScroll;
+      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const raw = clamp(latestScroll / maxScroll, 0, 1);
+      const velocity = clamp((event.velocity ?? 0) / 1200, -SCROLL_VELOCITY_LIMIT, SCROLL_VELOCITY_LIMIT);
+
+      syncSceneState(raw, prefersReduced ? 0 : velocity);
+      setPointerCurrent(currentRef.current);
+      updatePresence();
+      ScrollTrigger.update();
+    };
+
+    lenis.on("scroll", handleLenis);
+
+    const sectionTriggers = sectionsRef.current.map((section, index) => {
+      const sectionHeight = Math.max(section.offsetHeight, window.innerHeight);
+      return ScrollTrigger.create({
+        id: `hero-section-${index}`,
+        scroller,
+        trigger: section,
+        start: "top 85%",
+        end: `+=${sectionHeight}`,
+        scrub: true,
+        pin: true,
+        pinSpacing: true,
+        onEnter: () => {
+          const stage = homepageSections[index]?.stage ?? "observation";
+          setSceneMode(stage);
+        },
+        onEnterBack: () => {
+          const stage = homepageSections[index]?.stage ?? "observation";
+          setSceneMode(stage);
+        },
+      });
+    });
+
+    const masterTrigger = ScrollTrigger.create({
+      id: "hero-scroll-progress",
+      scroller,
+      trigger: heroRef.current,
+      start: "top top",
+      end: () => `+=${Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)}`,
+      scrub: 0.1,
+      onUpdate: (self) => {
+        const velocity = clamp((self.getVelocity() ?? 0) / 1200, -SCROLL_VELOCITY_LIMIT, SCROLL_VELOCITY_LIMIT);
+        syncSceneState(self.progress, prefersReduced ? 0 : velocity);
+        updatePresence();
+      },
+    });
+
+    const tick = (time: number) => {
+      lenis.raf(time);
+      const previous = lastFrameAtRef.current || time;
+      const dt = clamp((time - previous) / 1000, 0.001, 0.05);
+      lastFrameAtRef.current = time;
       const t = 0.055;
+
       currentRef.current.x = lerp(currentRef.current.x, mouseRef.current.x, t);
       currentRef.current.y = lerp(currentRef.current.y, mouseRef.current.y, t);
       const mx = prefersReduced ? 0 : currentRef.current.x;
       const my = prefersReduced ? 0 : currentRef.current.y;
 
-      updateScrollState();
-      syncSceneState(dt);
-
-      /* ── Mouse target — drives WebGL mesh rotation via spring physics in SlabMesh ── */
-      /* Hero.tsx writes target every frame (window-level pointermove, no blind spot).
-         SlabMesh.useFrame reads target and runs spring physics independently.
-         Separation of concerns: Hero writes target → SlabMesh computes physics.
-         No double-write of p.pos/p.vel in two places. */
       const p = slabPhysRef.current;
-      p.target.x = prefersReduced ? 0 : mx * 0.22;
-      p.target.y = prefersReduced ? PHYS_REST_Y : my * 0.14 + PHYS_REST_Y;
-      /* p.active is maintained by onMove/onLeave (window-level events) */
-
-      /* ── DOM-level parallax: title ──────── */
-      if (titleRef.current) {
-        if (isTouch || prefersReduced) {
-          titleRef.current.style.transform = `translate3d(0px, 0px, 0px)`;
-        } else {
-          titleRef.current.style.transform =
-            `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
-        }
+      p.target.x = mx * 0.22;
+      p.target.y = PHYS_REST_Y + my * 0.14;
+      setPointerCurrent(currentRef.current);
+      if (titleRef.current && !isTouchDevice.current && !prefersReduced) {
+        titleRef.current.style.transform = `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
+      } else if (titleRef.current) {
+        titleRef.current.style.transform = "translate3d(0px, 0px, 0px)";
       }
 
       rafRef.current = scheduleFrame(tick);
+      void dt;
     };
 
     rafRef.current = scheduleFrame(tick);
+    handleLenis({ scroll: window.scrollY, velocity: 0 });
+    ScrollTrigger.refresh();
 
     return () => {
       cancelFrame(rafRef.current);
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerleave", onLeave);
-      window.removeEventListener("blur", onLeave);
+      lenis.off("scroll", handleLenis);
+      (lenis as any).destroy();
+      sectionTriggers.forEach((trigger) => trigger.kill(true));
+      masterTrigger.kill(true);
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (trigger.id?.startsWith("hero-")) {
+          trigger.kill(true);
+        }
+      });
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("blur", onPointerLeave);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
-      window.removeEventListener("scroll", onScroll);
+      ScrollTrigger.scrollerProxy(scroller as HTMLElement, {});
     };
-  }, []);
+  }, [setPointerActive, setPointerCurrent, setPointerTarget, setSceneMode, setSceneState, setTouchDevice, setReducedMotion, setViewport]);
 
   return (
     <main
+      ref={heroRef}
       id="hero"
       aria-label="Recursive intelligence homepage"
       className="relative min-h-[500svh] overflow-x-hidden"
-      style={{
-        isolation: "isolate",
-      }}
+      style={{ isolation: "isolate" }}
     >
-      {/* ── Brand (top-left) ──────────────────────────── */}
+      {/* Brand */}
       <header
         className="brand absolute z-10 select-none"
         style={{
@@ -382,7 +487,7 @@ export default function Hero() {
         </span>
       </header>
 
-      {/* ── Meta (top-right) ──────────────────────────── */}
+      {/* Meta */}
       <div
         className="meta absolute z-10 select-none"
         aria-hidden="true"
@@ -412,16 +517,10 @@ export default function Hero() {
         <span>AI-native interface</span>
       </div>
 
-      {/* ── WebGL architectural slab ───────────────── */}
-      {/* The fixed wrapper never receives transforms. Scroll movement is passed
-          into the R3F scene through sceneStateRef so only the slab moves. */}
-      <div
-        className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
-      >
+      <div className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none">
         <WebGLSlab physRef={slabPhysRef} sceneStateRef={sceneStateRef} />
       </div>
 
-      {/* ── Recursive narrative copy ───────────────────── */}
       <div className="relative z-20">
         {homepageSections.map((section, index) => (
           <NarrativeSection
@@ -433,7 +532,6 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* ── Noscript fallback ─────────────────────────── */}
       <noscript>
         <p
           style={{

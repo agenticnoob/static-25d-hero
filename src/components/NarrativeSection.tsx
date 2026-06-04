@@ -37,6 +37,14 @@ export default function NarrativeSection({
           {section.body}
         </p>
 
+        {section.signals ? (
+          <div className="narrative-signals" aria-hidden="true">
+            {section.signals.map((signal) => (
+              <span key={signal}>{signal}</span>
+            ))}
+          </div>
+        ) : null}
+
         {section.cta ? (
           <div className="cta-row mt-9">
             <a

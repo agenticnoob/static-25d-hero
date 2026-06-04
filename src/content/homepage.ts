@@ -5,6 +5,7 @@ export interface HomepageSection {
   kicker: string;
   title: string;
   body: string;
+  signals?: string[];
   cta?: {
     href: string;
     label: string;
@@ -14,33 +15,36 @@ export interface HomepageSection {
 export const homepageSections: HomepageSection[] = [
   {
     stage: "observation",
-    kicker: "观察",
-    title: "重构递归智能界面。",
-    body: "我曾在旧的前端系统里工作。现在更关心软件为谁而建，以及它如何为 AI 留出位置。",
+    kicker: "noobli / observation",
+    title: "AI is not entering the old interface. It is bending it.",
+    body: "前端工程曾经训练我理解旧界面的骨架。现在我更关心 AI 参与之后，界面如何观察、行动，并重写自身条件。",
   },
   {
     stage: "causality",
-    kicker: "因果",
+    kicker: "causality",
     title: "工具改变工作流，工作流改变组织。",
-    body: "工具改变流程。流程改变协作。协作改变认知。认知最终改变世界。",
+    body: "旧界面把工具当成按钮。AI-native interface 把工具视为因果起点，牵动流程、协作、认知与基础设施。",
+    signals: ["tool", "workflow", "organization", "cognition", "infrastructure"],
   },
   {
     stage: "recursion",
-    kicker: "递归",
+    kicker: "recursion",
     title: "系统开始设计自身被重构的条件。",
-    body: "输出重新成为输入。界面不再只是操作面板，而是反馈、观察与自我修正的表面。",
+    body: "输出重新成为输入。界面不再只是控制面板，而是反馈、观察与自我修正的表面。",
+    signals: ["output", "input", "feedback", "revision"],
   },
   {
     stage: "selfReference",
-    kicker: "自指",
+    kicker: "self-reference",
     title: "一个系统，正在观察改变它的系统。",
-    body: "这个页面描述 AI 如何改变界面，同时让自己也像一个被改变后的界面那样运作。",
+    body: "This page says this once: it describes a changed interface by behaving like one.",
   },
   {
     stage: "reconstruction",
-    kicker: "重构",
-    title: "不是给旧结构加上 AI，而是重建空间。",
-    body: "复杂度不会消失。稀缺的能力会转向目标定义、系统治理，以及让人和 AI 都能理解的结构。",
+    kicker: "reconstruction",
+    title: "不是给旧结构加上 AI，而是为它重建空间。",
+    body: "noobli 在品味、前端纪律、WebGL、递归工作流与 agentic tools 交界处工作。旧 slab 不爆炸，它让出空间。",
+    signals: ["taste", "frontend", "webgl", "recursive workflows", "agentic tools"],
     cta: {
       href: "https://github.com/noobli",
       label: "开始交流",

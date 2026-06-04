@@ -17,14 +17,18 @@
 
 ## 本轮完成状态
 
-- 首页叙事文案已改为中文。
-- 页面 metadata 已改为中文。
+- 首页叙事已以中文为主线，但含有少量英文表达；叙事结构与阶段顺序与代码一致。
+- 页面文案与元数据已以空间化个人主页语义为主（noobli 身份与递归智能主线一致）。
 - WebGL 层已修复视口尺寸、横向溢出和 slab 过大问题。
 - 文档已补充 `data/` 参考边界。
-- 已完成一轮桌面/移动端中文视觉 QA。
+- 已完成一轮桌面/移动端视觉 QA（包括重构阶段的移动布局与可读性校验）。
 - 移动端 reconstruction 阶段已避开 slab 高亮区域，正文和 CTA 保持在上三分之一。
 - 已补充 `npm test` 与 `npm run typecheck`，并加入 `src/lib/interaction.ts` 的阶段映射回归测试。
 - 已补充 `docs/CODE_DOC_ALIGNMENT.md`，并将旧英文 Superpowers spec/plan 标注为历史计划。
+
+当前可回退状态：
+
+- 下一阶段执行前，无额外外部架构迁移动作已落地；当前页面仍是 custom rAF + 共享 ref 的方案。
 
 ## 下一阶段任务
 
@@ -34,9 +38,9 @@
    - 保持正文短句，不扩展成哲学长文。
 
 2. **WebGL 阶段表达**
-   - 因果阶段：增强低对比 trace line。
-   - 递归阶段：加入缓慢、克制的 loop 光路。
-   - 重构阶段：加入少量节点重排，但不形成第二焦点。
+   - 因果阶段：调校已存在的低对比 trace line，使因果链更可读但不抢正文。
+   - 递归阶段：调校已存在的 loop 光路节奏，避免看起来像装饰性旋转。
+   - 重构阶段：调校已存在的节点重排与 slab 顶点弯曲，保持单一焦点。
 
 3. **移动端硬化**
    - 确认 DPR 为 `[1, 1]`。
@@ -46,6 +50,7 @@
 4. **文档同步**
    - 保持 `README.md`、`DESIGN.md`、`docs/CODE_DOC_ALIGNMENT.md` 与当前实现一致。
    - 后续如果迁移到 Zustand/Lenis/ScrollTrigger/Rapier/Motion，应同步把 planned 状态改为 implemented。
+   - 如果继续调整 `WebGLSlab.tsx` 的 shader literal 色值，需要同步 `DESIGN.md` 的 WebGL 色值说明。
 
 ## 推荐执行顺序
 

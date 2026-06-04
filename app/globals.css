@@ -42,41 +42,8 @@ body {
   /* Typography */
   --font-serif: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
 
-  /* Animations */
-  --animate-apex-pulse: apexPulse 3s ease-in-out infinite;
-
   /* Custom cubic bezier */
   --ease-quiet: cubic-bezier(0.28, 0.72, 0.18, 1);
-}
-
-/* ── Keyframes ──────────────────────────────────────────── */
-@keyframes apexPulse {
-  0%, 100% {
-    box-shadow:
-      0 0 8px 2px rgba(80, 200, 255, 0.8),
-      0 0 20px 4px rgba(80, 200, 255, 0.4),
-      0 0 40px 8px rgba(100, 180, 255, 0.2),
-      0 0 60px 12px rgba(60, 160, 220, 0.1);
-    opacity: 1;
-  }
-  50% {
-    box-shadow:
-      0 0 12px 3px rgba(80, 200, 255, 1),
-      0 0 30px 6px rgba(80, 200, 255, 0.6),
-      0 0 50px 10px rgba(100, 180, 255, 0.3),
-      0 0 80px 16px rgba(60, 160, 220, 0.15);
-    opacity: 0.9;
-  }
-}
-
-/* ── Subtle grid overlay ───────────────────────────────── */
-.grid-overlay {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 0%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 0%, transparent 80%);
 }
 
 /* ── 3D helpers ────────────────────────────────────────── */
@@ -299,6 +266,47 @@ body {
   text-wrap: pretty;
 }
 
+.narrative-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 12px;
+  margin-top: 26px;
+  color: rgba(237, 233, 227, 0.36);
+  font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
+  font-size: 10px;
+  font-style: italic;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+}
+
+.narrative-signals span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.narrative-signals span:not(:last-child)::after {
+  content: "";
+  display: inline-block;
+  width: clamp(18px, 4vw, 42px);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(237, 233, 227, 0.28),
+    rgba(237, 233, 227, 0.04)
+  );
+}
+
+.narrative-section--recursion .narrative-signals {
+  justify-content: flex-end;
+}
+
+.narrative-section--reconstruction .narrative-signals {
+  max-width: 560px;
+}
+
 .narrative-section .cta-link {
   pointer-events: auto;
 }
@@ -314,12 +322,6 @@ body {
   .meta {
     top: 20px !important;
     right: 20px !important;
-  }
-
-  /* Hero copy: reduce vertical offset, tighten padding */
-  .hero-copy {
-    top: 12vh !important;
-    padding: 0 24px !important;
   }
 
   /* Title: reduce clamp — smaller on mobile */
@@ -343,6 +345,24 @@ body {
     font-size: 13px;
     line-height: 1.72;
     max-width: 31rem;
+  }
+
+  .narrative-signals,
+  .narrative-section--recursion .narrative-signals {
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 31rem;
+  }
+
+  .narrative-signals {
+    gap: 8px 10px;
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+  }
+
+  .narrative-signals span:not(:last-child)::after {
+    width: 18px;
   }
 
   .narrative-section {
@@ -390,19 +410,10 @@ body {
     letter-spacing: 0.2em !important;
   }
 
-  /* Disable pointer parallax on touch — touchmove handled separately */
-  .parallax-enabled .title {
-    /* parallax still off for title per design spec */
-  }
 }
 
 /* ── Very small screens — 400px and below ─────────────── */
 @media (max-width: 400px) {
-  .hero-copy {
-    top: 10vh !important;
-    padding: 0 16px !important;
-  }
-
   .title {
     font-size: clamp(24px, 9vw, 36px) !important;
   }
@@ -443,10 +454,6 @@ body {
 
 /* ── Landscape mobile: shift layout ────────────────────── */
 @media (max-height: 500px) and (orientation: landscape) {
-  .hero-copy {
-    top: 6vh !important;
-  }
-
   .title {
     font-size: clamp(22px, 6vw, 36px) !important;
     margin-bottom: 8px !important;

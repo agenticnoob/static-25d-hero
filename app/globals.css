@@ -154,6 +154,18 @@ body {
   will-change: opacity, filter, transform;
 }
 
+.narrative-section[data-active="false"] .narrative-section-inner {
+  opacity: 0.2;
+  filter: blur(1.4px);
+  transform: translate3d(0, 24px, 0) scale(0.986);
+}
+
+.narrative-section[data-active="true"] .narrative-section-inner {
+  opacity: 1;
+  filter: blur(0);
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
 .narrative-kicker {
   color: rgba(237, 233, 227, 0.38);
   font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;

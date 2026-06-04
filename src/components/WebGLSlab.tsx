@@ -389,7 +389,7 @@ function GroundPlane({ sceneStateRef }: GroundPlaneProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const { viewport } = useThree();
-  const baseY = -1.4;
+  const baseY = -1.18;
 
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
@@ -446,7 +446,7 @@ function SlabMesh({
   const slabMatRef = useRef<THREE.ShaderMaterial>(null);
   const { viewport } = useThree();
   const slabScale = Math.min(0.58, Math.max(0.38, (viewport.width / 4.2) * 0.62));
-  const slabY = viewport.width < 4 ? -1.28 : -1.45;
+  const slabY = viewport.width < 4 ? -1.08 : -1.18;
 
   useFrame(({ clock }) => {
     const p = physRef.current;

@@ -60,6 +60,23 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+function scheduleFrame(callback: FrameRequestCallback): number {
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    return window.requestAnimationFrame(callback);
+  }
+
+  return window.setTimeout(() => callback(performance.now()), 16);
+}
+
+function cancelFrame(id: number) {
+  if (typeof window !== "undefined" && typeof window.cancelAnimationFrame === "function") {
+    window.cancelAnimationFrame(id);
+    return;
+  }
+
+  window.clearTimeout(id);
+}
+
 /* ─────────────────────────────────────────────────────────────────
    Hero
    ───────────────────────────────────────────────────────────────── */
@@ -129,8 +146,8 @@ export default function Hero() {
       el.style.transition =
         "opacity 0.9s cubic-bezier(0.28, 0.72, 0.18, 1), transform 0.9s cubic-bezier(0.28, 0.72, 0.18, 1)";
       el.style.transitionDelay = `${delay}s`;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      scheduleFrame(() => {
+        scheduleFrame(() => {
           el.style.opacity = "1";
           el.style.transform = "translateY(0)";
         });
@@ -188,6 +205,7 @@ export default function Hero() {
     }
 
     const onScroll = () => { scrollYRef.current = window.scrollY; };
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
 
     /* ── RAF loop ─────────────────────────────────────── */
@@ -262,13 +280,13 @@ export default function Hero() {
       sceneStateRef.current.slabDropPx =
         norm * (isTouch ? SLAB_MAX_Y_TOUCH : SLAB_MAX_Y_DESKTOP);
 
-      rafRef.current = requestAnimationFrame(tick);
+      rafRef.current = scheduleFrame(tick);
     };
 
-    rafRef.current = requestAnimationFrame(tick);
+    rafRef.current = scheduleFrame(tick);
 
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      cancelFrame(rafRef.current);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("blur", onLeave);
@@ -354,9 +372,8 @@ export default function Hero() {
       </div>
 
       {/* ── WebGL architectural slab ───────────────── */}
-      {/* slabRef wraps the WebGL div for scroll-driven CSS parallax.
-          slabPhysRef is passed into WebGLSlab so Hero.tsx's RAF loop
-          can update the physics state directly — no event-blind-spot. */}
+      {/* The fixed wrapper never receives transforms. Scroll movement is passed
+          into the R3F scene through sceneStateRef so only slab/ground move. */}
       <div
         className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
       >

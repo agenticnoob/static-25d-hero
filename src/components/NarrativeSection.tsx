@@ -16,6 +16,7 @@ export default function NarrativeSection({
     <section
       className="narrative-section relative z-20 flex min-h-[100svh] items-center"
       data-stage={section.stage}
+      data-active={isIntro ? "true" : "false"}
       aria-labelledby={`section-${section.stage}`}
     >
       <div className="narrative-section-inner mx-auto w-full max-w-[760px] px-6 text-center md:px-10">

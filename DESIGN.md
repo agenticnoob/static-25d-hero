@@ -86,27 +86,27 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | z-0 | Background gradient / atmosphere | 0 | Fixed WebGL `BgQuad`, no pointer parallax |
 | z-0 | Grid or soft depth field | 0 | Zero or very low |
 | z-4 | Atmospheric glow | 4 | Zero |
-| z-5 | WebGL slab / physics object | 5 | Stage pose + pointer tilt + restrained rigid-body response |
+| z-5 | WebGL recursive stela | 5 | Fixed object + camera rail + restrained material response |
 | z-10 | Brand / Meta | 10 | Zero |
 | z-20 | Narrative copy / CTA | 20 | Scroll stage state + CSS state transitions |
 
 ### Spatial Composition
 
-- WebGL slab is the **single focal object**. Stage effects must modify this slab, not introduce a second focal mesh.
+- The WebGL recursive stela is the **single focal object**. Stage effects must modify this object, not introduce a second focal mesh.
 - The visual field must read as foreground / midground / background:
   - Foreground: narrative copy, CTA, fine line UI, optional glass-like panels.
-  - Midground: WebGL slab as the interactive narrative object.
+  - Midground: WebGL recursive stela as the narrative object.
   - Background: fixed atmospheric gradient, depth field, and soft shadow/glow.
-- Slab sits in the lower half of the viewport, receding toward a vanishing point.
+- The stela sits in the lower half of the viewport, receding toward a vanishing point.
 - The fixed WebGL wrapper must remain `top: 0`, `bottom: 100svh`, and `transform: none` during scroll.
-- Scroll-driven slab movement happens inside R3F through a damped visual scroll value, stage pose interpolation, and subtle scroll-velocity response. Scale, pitch, yaw, roll, and position may change by stage; never apply scroll transforms to the fixed DOM wrapper.
+- Scroll-driven meaning happens inside R3F through a damped visual scroll value, camera rail interpolation, and subtle scroll-velocity material response. The object remains fixed and stable; never apply scroll transforms to the fixed DOM wrapper.
 - Narrative copy changes posture by stage:
   - Observation: centered thesis.
   - Causality: left-weighted, explaining the chain.
   - Recursion: right-weighted, implying feedback.
   - Self-reference: narrow centered copy.
   - Reconstruction: lower-left final proposition with CTA.
-- Atmospheric radial glow sits behind the slab, creating depth separation
+- Atmospheric radial glow sits behind the stela, creating depth separation
 - Negative space is treated as a compositional element, not emptiness
 - Glass, translucency, fine borders, gradients, and shadow layers are allowed when they clarify hierarchy. They must stay soft and low saturation.
 
@@ -125,8 +125,8 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 ### Principles
 
-1. **Animation serves depth, not decoration.** Every motion should feel like physical consequence: inertia, gravity, friction, settling, or state transition.
-2. **No bounce, no elastic spectacle.** Rapier now drives rigid-body collisions and inertia. Collision response must stay heavy and damped, never playful or game-like.
+1. **Animation serves depth, not decoration.** Motion should feel like camera observation, material response, or state transition.
+2. **No bounce, no elastic spectacle.** There is no active rigid-body room, gravity, or collision model. The object should not behave like a game prop.
 3. **Scroll is the primary timeline.** The current implementation uses a custom rAF/ref loop. A future Lenis + GSAP ScrollTrigger migration may own smooth input, pin, scrub, progress, and section transitions.
 4. **UI micro-interactions stay restrained.** Current CTA hover/focus is pure CSS by constraint. Motion is a future UI layer only if the CTA event-handler constraint is deliberately revisited.
 5. **Parallax is ambient, not noisy.** It responds continuously to scroll and pointer position, but never makes body copy hard to read.
@@ -138,28 +138,23 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | Background | `0` | Fixed `BgQuad` shader; depth comes from gradient, grid, and atmospheric glow |
 | Title | `tx=-0.3px, ty=-0.2px` | Counter-displacement; creates depth separation from background |
 | Eyebrow / Subtitle / CTA | `0` | Text must remain legible; any parallax hurts readability |
-| WebGL slab | Mouse-driven tilt + damped scroll-stage pose | Inertia + gravity, plus stage-aware x/y/z/scale/yaw/roll/pitch and restrained velocity response |
+| WebGL stela | Camera rail + restrained pointer parallax | Fixed object, stage-aware camera position/look-at/roll, and low-amplitude material response |
 
-### Physics Model (WebGL Slab)
+### WebGL Interaction Model
 
-The slab tilts toward the pointer with spring-based inertia and a subtle gravity bias:
+The current WebGL object is fixed in world space. `Hero.tsx` writes pointer target and derived scroll state into refs; `WebGLSlab.tsx` reads those refs inside `useFrame`.
 
-```
-spring force:  vel = vel * damping + (target - pos) * spring
-damping:       0.82 (per-frame friction)
-gravity:       0.004 (downward bias when drifting, no active pointer)
-rest state:    rotation.x = 0.18 (slight top-tilt toward viewer)
-```
-
-When the pointer leaves: the slab drifts back toward rest with gravity pulling its pitch down slightly, then settles via the spring.
-
-This is intentionally **not** a 1:1 tilt. The lag and inertia make it feel physical.
+- `coreInteractionRef.target` comes from window-level pointer tracking.
+- `coreInteractionRef.pos` eases toward the target and only feeds pointer parallax/material uniforms.
+- `sceneStateRef` drives camera rail interpolation across the five narrative stages.
+- There is no gravity, collision, restitution, rigid body, room wall, or random impulse.
+- The object may rotate slightly as part of stage posture, but the story is primarily told by the camera.
 
 ### Scroll Stage Presence
 
 Each narrative section receives `data-active` from the unified `Hero.tsx` rAF loop. Sections use sticky inner content and varied `svh` lengths so scrolling feels like a sequence of held camera moments, not equal-height slides. Active text is full opacity; inactive text recedes through lower opacity, slight blur, and restrained y translation. These scroll-driven values are written directly by the rAF loop, so `.narrative-section-inner` must not also transition `opacity`, `filter`, or `transform` in CSS.
 
-The WebGL slab does not consume raw scroll progress directly. `Hero.tsx` keeps raw progress for content presence, then derives a damped visual progress for `sceneStateRef`. Stage progress uses short hold regions at the beginning and end of each stage, so the slab settles between spatial poses instead of moving at a constant mechanical rate.
+The WebGL object does not consume raw scroll progress directly. `Hero.tsx` keeps raw progress for content presence, then derives a damped visual progress for `sceneStateRef`. Stage progress uses short hold regions at the beginning and end of each stage, so the camera settles between spatial poses instead of moving at a constant mechanical rate.
 
 ### Target Motion Architecture
 
@@ -170,8 +165,7 @@ The next implementation should replace the custom rAF-driven scroll system with 
 | Smooth input | Lenis | Wheel/touch smoothing, normalized velocity, reduced-motion fallback |
 | Timeline | GSAP ScrollTrigger | `pin`, `scrub`, section progress, stage transitions |
 | Shared state | Zustand | `scrollProgress`, `scrollVelocity`, `mouse`, `viewport`, `sceneMode` |
-| WebGL rendering | Three.js / R3F / drei | Camera, material helpers, slab composition, background scene |
-| Physics | `@react-three/rapier` | Rigid-body inertia, collision, mass, damping, physical settling |
+| WebGL rendering | Three.js / R3F / drei | Camera rail, recursive stela geometry, shader material, background scene |
 | UI motion | Motion | Text entrance, CTA hover, layout transitions, subtle panel movement |
 
 One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions, and rAF all animate the same `transform` or `opacity` at the same time.
@@ -184,31 +178,33 @@ One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions
 
 ### Scene
 
-- **Camera:** `position [0, 2.0, 5.2]`, `fov 42` — narrow FOV for architectural feel
+- **Camera:** stage-aware rail from `CAMERA_RAIL_DESKTOP` / `CAMERA_RAIL_COMPACT`, `fov 48` — restrained product-page observation rather than object physics
 - **Lighting model:** Shader-driven material response in `slabFrag` (current scene does not add dedicated `AmbientLight`/`DirectionalLight` nodes).
 - **Background:** Transparent (alpha canvas)
 - **drei usage:** `@react-three/drei` is installed but currently unused. Prefer `Environment`, `ContactShadows`, camera helpers, and material utilities only when they improve depth or reduce boilerplate. Do not add helper effects that become a second focal point.
-- **Rapier usage:** Implemented. The room bounds and object are simulated with damped rigid-body response, fixed/kinematic guide walls, and collision settings tuned for quiet motion.
+- **Physics usage:** none in the active scene. `@react-three/rapier` is not part of the current runtime.
 
-### Slab Mesh
+### Recursive Stela Mesh
 
-- `boxGeometry [4.2, 0.035, 2.6, 32, 1, 18]` — a flat, wide slab with enough subdivisions for restrained vertex bending
-- `STAGE_POSES` defines stage-aware x/y/z/scale/yaw/roll/pitch offsets. These are visible spatial changes, but still restrained enough to avoid a game-like flip.
+- `createRecursiveCoreGeometry()` builds a thick, irregular extruded stela body with bevels and no through-hole.
+- `STELA_INSET_PANELS` and `STELA_RIDGE_PANELS` add dark front-surface recesses and raised architectural edges.
+- `STELA_LINE_PATHS` adds shallow engraved recursive paths on the front face.
+- The mesh group remains a single focal object; internal panels and line segments are craft details, not separate visual subjects.
+- `CAMERA_RAIL_DESKTOP` and `CAMERA_RAIL_COMPACT` define stage-aware camera position, look-at target, and roll.
 - Custom `shaderMaterial` with:
-  - Grey-white slab base that reads brighter than the obsidian background
-  - Anti-aliased grid lines via `fwidth` (no mipmap artifacts)
-  - Two grid scales: coarse (0.08) + fine (0.02)
-  - Diagonal cross-hatch accent
+  - Dark obsidian / graphite body color
+  - Low-amplitude mineral noise and micro-scratches
+  - Subtle warm edge light, not pure white
+  - Very restrained grid/trace language
   - Edge darkening (faux AO)
   - Normal-based lighting
-  - Radial pulse glow (time-driven)
+  - Low radial material glow (time-driven)
   - uMouse-driven sheen for pointer proximity
   - uInertia-driven observation sweep and material response
   - Restrained vertex bending via `vWarp`, driven by time + inertia
-  - Trace lines and low-contrast nodes
-  - Loop light paths
-  - Mirror echo traces
-  - Network-like node texture
+  - Trace, mirror, and network-like surface texture
+
+Avoid circular loop/ring motifs, torus silhouettes, through-holes, thin slabs, and visible physics rooms. The object should read first as a believable artifact, then as a philosophical/AI system through its secondary details.
 
 ### Canvas Sizing Rule
 
@@ -228,8 +224,8 @@ Without explicit user direction, the following are **constraints**, not suggesti
 
 - **Font:** Georgia. Never swap for Inter/Roboto/system-ui.
 - **Palette:** Obsidian + warm off-white. Never use `#FFFFFF` or saturated accent colors.
-- **No cheap bounce/overshoot:** physics and Motion springs are allowed only when heavily damped and visually restrained. No `ease-out-back`, elastic, or playful rebound.
-- **Single focal object:** The slab is the only 3D element. Never add a second mesh, particle burst, or competing visual.
+- **No cheap bounce/overshoot:** no `ease-out-back`, elastic, playful rebound, rigid-body bouncing, or collision spectacle.
+- **Single focal object:** The recursive stela is the only 3D subject. Never add a second object, particle burst, room cage, or competing visual.
 - **CTA:** Pure CSS hover, zero JS handlers. Never attach React event handlers to the CTA.
 - **Parallax:** Title counter-parallax only on non-touch devices. Narrative kicker/body/CTA = zero pointer parallax.
 - **Mobile:** DPR capped at 1. Entrance animation disabled. Parallax amplitude halved.

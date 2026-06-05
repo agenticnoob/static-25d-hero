@@ -49,7 +49,7 @@ const POINTER_SCALE = {
 const SCROLL_FOLLOW = 0.085;
 const SCROLL_VELOCITY_DAMPING = 0.82;
 const SCROLL_VELOCITY_LIMIT = 1.35;
-const PHYS_REST_Y = 0.18;
+const CORE_REST_Y = 0.18;
 const TICK_EASE = 0.055;
 const SCROLL_VELOCITY_RESPONSE = 0.22;
 
@@ -106,15 +106,15 @@ export default function Hero() {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const sectionsRef = useRef<HTMLElement[]>([]);
 
-  const slabPhysRef = useRef<{
+  const coreInteractionRef = useRef<{
     pos: THREE.Vector2;
     vel: THREE.Vector2;
     target: THREE.Vector2;
     active: boolean;
   }>({
-    pos: new THREE.Vector2(0, PHYS_REST_Y),
+    pos: new THREE.Vector2(0, CORE_REST_Y),
     vel: new THREE.Vector2(0, 0),
-    target: new THREE.Vector2(0, PHYS_REST_Y),
+    target: new THREE.Vector2(0, CORE_REST_Y),
     active: false,
   });
 
@@ -212,7 +212,7 @@ export default function Hero() {
       const nextPointer = readPointerFromViewport(event);
       mouseRef.current.x = nextPointer.x;
       mouseRef.current.y = nextPointer.y;
-      slabPhysRef.current.active = true;
+      coreInteractionRef.current.active = true;
       setPointerActive(true);
       setPointerTarget(mouseRef.current);
     };
@@ -220,7 +220,7 @@ export default function Hero() {
     const onPointerLeave = () => {
       mouseRef.current.x = 0;
       mouseRef.current.y = 0;
-      slabPhysRef.current.active = false;
+      coreInteractionRef.current.active = false;
       setPointerActive(false);
       setPointerTarget(mouseRef.current);
     };
@@ -231,7 +231,7 @@ export default function Hero() {
       const nextPointer = readPointerFromViewport(touch);
       mouseRef.current.x = nextPointer.x;
       mouseRef.current.y = nextPointer.y;
-      slabPhysRef.current.active = true;
+      coreInteractionRef.current.active = true;
       setPointerActive(true);
       setPointerTarget(mouseRef.current);
     };
@@ -239,13 +239,13 @@ export default function Hero() {
     const onTouchEnd = () => {
       mouseRef.current.x = 0;
       mouseRef.current.y = 0;
-      slabPhysRef.current.active = false;
+      coreInteractionRef.current.active = false;
       setPointerActive(false);
       setPointerTarget(mouseRef.current);
     };
 
     if (prefersReduced) {
-      slabPhysRef.current.active = false;
+      coreInteractionRef.current.active = false;
     } else if (isTouchDevice.current) {
       window.addEventListener("touchmove", onTouchMove, { passive: true });
       window.addEventListener("touchend", onTouchEnd, { passive: true });
@@ -420,9 +420,9 @@ export default function Hero() {
       const mx = prefersReduced ? 0 : currentRef.current.x;
       const my = prefersReduced ? 0 : currentRef.current.y;
 
-      const p = slabPhysRef.current;
+      const p = coreInteractionRef.current;
       p.target.x = mx * POINTER_SCALE.x;
-      p.target.y = PHYS_REST_Y + my * POINTER_SCALE.y;
+      p.target.y = CORE_REST_Y + my * POINTER_SCALE.y;
       setPointerCurrent(currentRef.current);
       if (titleRef.current && !isTouchDevice.current && !prefersReduced) {
         titleRef.current.style.transform = `translate3d(${mx * TITLE_TX}px, ${my * TITLE_TY}px, 0)`;
@@ -444,7 +444,7 @@ export default function Hero() {
       sectionTriggers.forEach((trigger) => trigger.kill(true));
       masterTrigger.kill(true);
       ScrollTrigger.getAll().forEach((trigger) => {
-        if (trigger.id?.startsWith("hero-")) {
+        if (trigger.vars.id?.startsWith("hero-")) {
           trigger.kill(true);
         }
       });
@@ -531,7 +531,7 @@ export default function Hero() {
       </div>
 
       <div className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none">
-        <WebGLSlab physRef={slabPhysRef} sceneStateRef={sceneStateRef} />
+        <WebGLSlab coreInteractionRef={coreInteractionRef} sceneStateRef={sceneStateRef} />
       </div>
 
       <div className="relative z-20">

@@ -73,7 +73,7 @@ The page should communicate that old UI patterns were designed for human-only op
    The site describes AI changing interfaces while it itself behaves like an AI-native interface. This should appear once, quietly.
 
 5. **Reconstruction**
-   Nodes, grid, and light reorganize. The old slab does not explode. It makes room. The final state is a rebuilt structure.
+   Engraving, depth, and light reorganize. The old interface does not explode. It makes room. The final state is a rebuilt structure.
 
 ## Desired Visitor Impression
 
@@ -87,7 +87,7 @@ The visitor should leave thinking:
 ## Product Constraints
 
 - Do not turn the site into a text-heavy philosophy essay.
-- Do not turn physics into a game.
+- Do not turn interaction into a game or physics toy.
 - Do not add multiple competing 3D focal objects.
 - Do not change the existing obsidian and warm off-white identity without a separate design decision.
 - Do not use bounce, elastic, or playful overshoot.

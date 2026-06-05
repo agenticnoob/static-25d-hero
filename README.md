@@ -17,7 +17,7 @@ static-25d-hero/
 ├── src/components/
 │   ├── Hero.tsx          # Unified rAF loop, scroll stage state, fixed canvas wrapper
 │   ├── NarrativeSection.tsx # Five sparse Chinese narrative stages
-│   └── WebGLSlab.tsx     # Single R3F Canvas: fixed background + stage-aware slab
+│   └── WebGLSlab.tsx     # Single R3F Canvas: fixed background + recursive stela object
 ├── src/content/
 │   └── homepage.ts       # Chinese section copy and CTA
 ├── src/lib/
@@ -47,17 +47,16 @@ No UI kit. Tailwind v4 remains the design-system layer.
 
 ### Interaction stack status
 
-The implementation currently uses one custom interaction stack in `Hero.tsx` + `WebGLSlab.tsx` (rAF + mutable refs + stage mapping). `@react-three/rapier` is already integrated, while the items below are still planned follow-up options.
+The implementation currently uses one interaction stack in `Hero.tsx` + `WebGLSlab.tsx`: Lenis + ScrollTrigger normalize the scroll timeline, `Hero.tsx` keeps the DOM/narrative state in a unified rAF loop, and `WebGLSlab.tsx` reads the derived `SceneState` for a fixed WebGL object and camera narrative. There is no active rigid-body room, gravity, collision, or Rapier runtime.
 
 | Package | Status | Intended role |
 |---------|--------|---------------|
-| `@react-three/rapier` | Implemented | WebGL rigid bodies, collision, inertia, restrained physical settling |
-| `lenis` | Planned | Smooth scroll source of truth, normalized wheel/touch momentum |
-| `gsap` + `ScrollTrigger` | Planned | Scroll timelines: pin, scrub, progress, section transitions |
-| `motion` | Planned | UI micro-interactions: entrance, hover, layout transitions |
-| `zustand` | Planned | Shared scroll/mouse/viewport/scene-mode state across DOM and R3F |
+| `lenis` | Implemented | Smooth scroll input and normalized wheel/touch momentum |
+| `gsap` + `ScrollTrigger` | Implemented | Scroll progress source, section triggers, and timeline coordination |
+| `motion` | Implemented | Narrative section presence primitives |
+| `zustand` | Implemented | Shared pointer, viewport, and scene-mode state |
 
-Current code uses a custom rAF loop and mutable refs for scroll/pointer state. Rapier is already in use inside `WebGLSlab`.
+Current code still keeps the per-frame DOM/pointer writes in a custom rAF loop so one owner coordinates copy presence, title counter-parallax, and WebGL state. The WebGL object is fixed in world space; scroll moves the camera rail and material response rather than a physics room.
 
 `InteractionState` in `src/lib/interaction.ts` describes the future shared source state shape. `SceneState` is the current WebGL render state passed from `Hero.tsx` to `WebGLSlab.tsx`; it stores damped scroll progress, stage index, eased stage progress, and scroll velocity.
 
@@ -78,19 +77,19 @@ npm run start      # Serve the built output
 
 ## Current architecture
 
-The page is a `500svh` long-scroll surface. The WebGL canvas stays fixed at `100svh`; raw scrolling drives narrative section presence, while a damped visual scroll value updates a mutable `sceneStateRef` for the R3F slab. This avoids creating a fixed-position containing block bug where the canvas itself appears to fall during scroll, and keeps the slab motion from feeling locked to the scrollbar.
+The page is a `500svh` long-scroll surface. The WebGL canvas stays fixed at `100svh`; raw scrolling drives narrative section presence, while a damped visual scroll value updates a mutable `sceneStateRef` for the R3F object. This avoids creating a fixed-position containing block bug where the canvas itself appears to fall during scroll, and keeps the WebGL narrative from feeling locked to the scrollbar.
 
-There is one WebGL focal object: the slab. Its shader and pose are stage-aware:
+There is one WebGL focal object: a thick recursive stela, built from a dark monolithic core, inset panels, ridges, and shallow engraved line paths. It is intentionally not a thin slab, ring, through-hole, physics body, or room-bound object. Its camera pose and material response are stage-aware:
 
 | Stage | HTML narrative | WebGL expression |
 |-------|----------------|------------------|
-| 观察 | Centered thesis | Baseline pose + inertia-driven sweep + slab ambient grid |
-| 因果 | 左侧重心 | `STAGE_POSES` 横向偏移 + 惯性/碰撞响应 |
-| 递归 | 右侧重心 | `STAGE_POSES` 偏移与比例变化 + 惯性/碰撞响应 |
-| 自指 | 中央收束 | 轻微俯仰偏移 + 惯性/碰撞响应 |
-| 重构 | 下左收束 | `STAGE_POSES` 细微缩放与姿态重置 + 惯性/碰撞响应 |
+| 观察 | Centered thesis | Baseline camera pose + low-contrast observation sweep |
+| 因果 | 左侧重心 | Camera rail shifts to expose depth and side mass |
+| 递归 | 右侧重心 | Inset panels and engraved paths become the conceptual layer |
+| 自指 | 中央收束 | Camera closes in; mirror-like material traces stay restrained |
+| 重构 | 下左收束 | Camera returns to a stable architectural read |
 
-The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narrative sections. Background and slab rendering live in one `WebGLSlab.tsx` scene (`BgQuad` + `SlabMesh`).
+The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narrative sections. Background and recursive stela rendering live in one `WebGLSlab.tsx` scene (`BgQuad` + `SlabMesh`, despite the legacy component name).
 
 ---
 
@@ -101,8 +100,8 @@ Documented in full in `DESIGN.md`. Core philosophy:
 - **architectural** — spatial composition, isometric WebGL object as the sole focal subject
 - **restrained** — one accent color family (blue-gray), no decoration for decoration's sake
 - **quiet luxury** — low-saturation palette, editorial serif typography, generous negative space
-- **single focal object** — everything orbits the slab; no competing elements
-- **stage-aware layout** — each viewport changes copy alignment and slab behavior
+- **single focal object** — everything orbits the recursive stela; no competing elements
+- **stage-aware layout** — each viewport changes copy alignment, camera posture, and material response
 - **spatial composition** — perspective depth, layered parallax, atmospheric void behind
 
 See `DESIGN.md` for color tokens, typography system, animation philosophy, and mobile strategy.
@@ -114,9 +113,9 @@ See `DESIGN.md` for color tokens, typography system, animation philosophy, and m
 See `AGENTS.md` for:
 
 - Project conventions and coding style
-- Parallax physics model (inertia + gravity)
+- Current interaction ownership model
 - Tailwind v4 `@theme` usage
-- R3F pattern (physics in `useFrame`, handlers outside Canvas)
+- R3F pattern (single Canvas, camera narrative, handlers outside Canvas)
 - Mobile performance strategy
 - What NOT to change when optimizing
 
@@ -132,8 +131,8 @@ See `AGENTS.md` for:
 | Obsidian palette | `app/globals.css` → `@theme` block |
 | Narrative stage layout | `app/globals.css` → `.narrative-section--*` |
 | Scroll stage model | `src/lib/interaction.ts` |
-| Slab physics constants | `src/components/WebGLSlab.tsx` → `PHYS` |
-| Stage-specific slab pose | `src/components/WebGLSlab.tsx` → `STAGE_POSES` |
+| WebGL camera rail | `src/components/WebGLSlab.tsx` → `CAMERA_RAIL_*` |
+| Recursive stela geometry | `src/components/WebGLSlab.tsx` → `createRecursiveCoreGeometry`, `STELA_*` |
 | Shader effects | `src/components/WebGLSlab.tsx` → `slabFrag`（基于 `uInertia`、`uImpact`、`uMouse`） |
 
 ## Documentation status

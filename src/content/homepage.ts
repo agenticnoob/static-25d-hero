@@ -43,7 +43,7 @@ export const homepageSections: HomepageSection[] = [
     stage: "reconstruction",
     kicker: "reconstruction",
     title: "不是给旧结构加上 AI，而是为它重建空间。",
-    body: "noobli 在品味、前端纪律、WebGL、递归工作流与 agentic tools 交界处工作。旧 slab 不爆炸，它让出空间。",
+    body: "noobli 在品味、前端纪律、WebGL、递归工作流与 agentic tools 交界处工作。旧界面不爆炸，它让出空间。",
     signals: ["taste", "frontend", "webgl", "recursive workflows", "agentic tools"],
     cta: {
       href: "https://github.com/noobli",

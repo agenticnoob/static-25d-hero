@@ -10,48 +10,52 @@
 
 - 保持 obsidian + warm off-white 视觉身份。
 - 保持 Georgia 字体，不引入 Inter、Roboto、system-ui。
-- 保持单一 WebGL slab 焦点，不增加第二个竞争 3D 物体。
-- 不使用 bounce、elastic、overshoot 动效。
+- 保持单一 WebGL 主体，不增加第二个竞争 3D 物体。
+- 当前主体是 recursive stela，不是薄 slab、圆环、洞、物理刚体或房间里的物体。
+- 不使用 bounce、elastic、overshoot、碰撞、重力或游戏化物理。
 - CTA 继续使用纯 CSS hover，不加 React 事件处理。
 - Tailwind v4 继续通过 `@theme` 管理 token，不加入 v3 风格配置。
 
 ## 本轮完成状态
 
-- 首页叙事已以中文为主线，但含有少量英文表达；叙事结构与阶段顺序与代码一致。
-- 页面文案与元数据已以空间化个人主页语义为主（noobli 身份与递归智能主线一致）。
-- WebGL 层已修复视口尺寸、横向溢出和 slab 过大问题。
-- 文档已补充 `data/` 参考边界。
-- 已完成一轮桌面/移动端视觉 QA（包括重构阶段的移动布局与可读性校验）。
-- 移动端 reconstruction 阶段已避开 slab 高亮区域，正文和 CTA 保持在上三分之一。
-- 已补充 `npm test` 与 `npm run typecheck`，并加入 `src/lib/interaction.ts` 的阶段映射回归测试。
-- 已补充 `docs/CODE_DOC_ALIGNMENT.md`，并将旧英文 Superpowers spec/plan 标注为历史计划。
+- WebGL runtime 已移除 Rapier/room/physics/collision 方向。
+- `@react-three/rapier` 已从依赖中移除。
+- 主体改成厚重 recursive stela：厚碑体、front inset panels、ridge panels、engraved recursive paths。
+- 滚动叙事改由 camera rail、pointer parallax 和材质响应表达。
+- shader 中会被读成圆环的 loop/ring 纹理已移除。
+- 可见文案已去掉旧 `slab` 称呼。
+- README、PRODUCT、DESIGN、HANDOFF 和本文件已同步到当前架构。
 
 当前可回退状态：
 
-- 下一阶段执行前，无额外外部架构迁移动作已落地；当前页面仍是 custom rAF + 共享 ref 的方案。
+- 仍是一个 WebGL scene、一个主要对象、一个 DOM/rAF interaction owner。
+- `WebGLSlab.tsx` 和 `SlabMesh` 是遗留命名，当前实现语义已经是 stela/core。
 
 ## 下一阶段任务
 
-1. **叙事节奏优化**
-   - 让非当前段落更安静地退场。
-   - 每个视口只保留一个清晰观点。
-   - 保持正文短句，不扩展成哲学长文。
+1. **视觉 QA**
+   - 刷新 `http://localhost:3000`。
+   - 检查第一眼是否读成厚重 artifact，而不是洞、环、薄板或廉价遗迹资产。
+   - 检查桌面和 360px 移动端。
 
-2. **WebGL 阶段表达**
-   - 因果阶段：调校已存在的低对比 trace line，使因果链更可读但不抢正文。
-   - 递归阶段：调校已存在的 loop 光路节奏，避免看起来像装饰性旋转。
-   - 重构阶段：调校已存在的节点重排与 slab 顶点弯曲，保持单一焦点。
+2. **形体打磨**
+   - 如果主体仍显薄，增加视觉厚度和侧面权重。
+   - 如果像“贴片”，降低 front panel 的 opacity 或改成更像切削凹面。
+   - 如果像游戏遗迹，减少破损感，保留更精密的石墨/黑曜石工艺感。
 
-3. **移动端硬化**
-   - 确认 DPR 为 `[1, 1]`。
-   - 触屏设备禁用标题视差和入口动画。
-   - 保证中文在 360px 宽度仍可读。
+3. **材质打磨**
+   - 继续压低亮线，避免电路板和 neon cliché。
+   - 增加低对比矿物噪声、边缘磨损和 satin graphite 高光。
+   - 保持 warm off-white 高光，不使用纯白。
 
-4. **文档同步**
-   - 保持 `README.md`、`DESIGN.md`、`docs/CODE_DOC_ALIGNMENT.md` 与当前实现一致。
-   - 后续如果迁移到 Zustand/Lenis/ScrollTrigger/Rapier/Motion，应同步把 planned 状态改为 implemented。
-   - 如果继续调整 `WebGLSlab.tsx` 的 shader literal 色值，需要同步 `DESIGN.md` 的 WebGL 色值说明。
+4. **命名清理**
+   - 单独将 `WebGLSlab.tsx`、`SlabMesh`、`slabUniforms` 等旧命名迁移到 stela/core。
+   - 这一步应单独提交，避免和视觉参数混在一起。
+
+5. **文档持续同步**
+   - 后续如果继续调整 `WebGLSlab.tsx` 的 shader literal 色值，需要同步 `DESIGN.md`。
+   - 如果引入新的 runtime 依赖，必须在 `README.md` 标出 implemented/planned 状态。
 
 ## 推荐执行顺序
 
-先做叙事节奏，再做 WebGL 阶段效果，最后继续移动端硬化。不要先加复杂 shader 或节点物理；当前页面的第一优先级仍是中文表达、首屏比例、滚动稳定性和可验证的回归测试。
+先做视觉 QA，再打磨形体厚度和材质，最后做命名清理。不要先引入新的物理库、粒子系统或第二个 WebGL 焦点。

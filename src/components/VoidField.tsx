@@ -1,7 +1,7 @@
 "use client";
 
 // Legacy unused component. The current homepage keeps all active WebGL content
-// inside WebGLSlab.tsx and renders only BgQuad + the single slab focal object.
+// inside WebGLSlab.tsx and renders a transparent scene with one monolith focal object.
 import { useEffect, useRef } from "react";
 
 interface Particle {

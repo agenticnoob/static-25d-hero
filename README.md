@@ -17,7 +17,7 @@ static-25d-hero/
 ├── src/components/
 │   ├── Hero.tsx          # Unified rAF loop, scroll stage state, fixed canvas wrapper
 │   ├── NarrativeSection.tsx # Five sparse Chinese narrative stages
-│   └── WebGLSlab.tsx     # Single R3F Canvas: fixed background + recursive monolith object
+│   └── WebGLSlab.tsx     # Single R3F Canvas: transparent scene + recursive monolith object
 ├── src/content/
 │   └── homepage.ts       # Chinese section copy and CTA
 ├── src/lib/
@@ -79,7 +79,7 @@ npm run start      # Serve the built output
 
 The page is a `500svh` long-scroll surface. The WebGL canvas stays fixed at `100svh`; raw scrolling drives narrative section presence, while a damped visual scroll value updates a mutable `sceneStateRef` for the R3F object. This avoids creating a fixed-position containing block bug where the canvas itself appears to fall during scroll, and keeps the WebGL narrative from feeling locked to the scrollbar.
 
-There is one WebGL focal object: a GLB recursive monolith loaded from `public/models/black-layered-prism.optimized.glb`. It is intentionally not a thin slab, ring, through-hole, physics body, or room-bound object. Its camera pose and material response are stage-aware. The current direction is **Dream Valley Interface / Recursive Fossil**: a dark interface artifact whose surface appears compressed, engraved, mirrored, and stabilized by scroll, wrapped in smoke-brown, dark-forest, old-gold, and warm off-white tones inspired by Son Daven's atmosphere without copying its text or assets.
+There is one WebGL focal object: a GLB recursive monolith loaded from `public/models/black-layered-prism.optimized.glb`. It is intentionally not a thin slab, ring, through-hole, physics body, or room-bound object. Its camera pose and material response are stage-aware. The current direction is **Dream Valley Interface / Recursive Fossil**: a dark interface artifact whose surface appears compressed, engraved, mirrored, and stabilized by scroll. The page chrome and narrative layer use the `#142334` + `#baccd9` two-tone contrast system; the WebGL monolith keeps its existing fossil material palette unless a separate WebGL material pass is approved.
 
 | Stage | HTML narrative | WebGL expression |
 |-------|----------------|------------------|
@@ -89,7 +89,7 @@ There is one WebGL focal object: a GLB recursive monolith loaded from `public/mo
 | 自指 | 中央收束 | Mirror-like traces and self-reference bands intensify |
 | 重构 | 下左收束 | Compression recedes; signal stabilizes into an artifact |
 
-The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, mapped narrative sections, and a short scene-ready preloader. Background and recursive monolith rendering live in one `WebGLSlab.tsx` scene (`BgQuad` + `SlabMesh`, despite the legacy component name).
+The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, mapped narrative sections, and a short scene-ready preloader. The site background is CSS-owned by `app/globals.css`; `WebGLSlab.tsx` renders a transparent R3F scene with the recursive monolith object (`SlabMesh`, despite the legacy component name).
 
 ---
 
@@ -98,8 +98,8 @@ The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, mapped narrative
 Documented in full in `DESIGN.md`. Core philosophy:
 
 - **architectural** — spatial composition, WebGL object as the sole focal subject
-- **restrained** — low-saturation valley tones, no decoration for decoration's sake
-- **quiet luxury** — smoke-brown depth, dark-forest wash, old-gold highlights, editorial serif typography
+- **restrained** — two-color low-saturation contrast, no decoration for decoration's sake
+- **quiet luxury** — deep blue page ground, pale UI signal light, editorial serif typography
 - **single focal object** — everything orbits the recursive monolith; no competing elements
 - **stage-aware layout** — each viewport changes copy alignment, camera posture, and material response
 - **spatial composition** — perspective depth, layered parallax, atmospheric void behind
@@ -128,7 +128,7 @@ See `AGENTS.md` for:
 | Chinese section copy | `src/content/homepage.ts` |
 | CTA label / href | `src/content/homepage.ts` |
 | Brand mark / meta | `src/components/Hero.tsx` |
-| Dream valley palette | `app/globals.css` → `@theme` block |
+| Two-tone page chrome palette | `app/globals.css` → `@theme` block |
 | Narrative stage layout | `app/globals.css` → `.narrative-section--*` |
 | Scroll stage model | `src/lib/interaction.ts` |
 | WebGL camera rail | `src/components/WebGLSlab.tsx` → `CAMERA_RAIL_*` |

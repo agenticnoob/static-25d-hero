@@ -8,7 +8,7 @@
 
 ## 已确认约束
 
-- 保持 deep valley + warm off-white 视觉身份。
+- 保持 `#142334` + `#baccd9` 页面 chrome 双色视觉身份；WebGL monolith 材质色彩单独评估，不和 CSS/page-chrome 调色混在一起。
 - 保持 Georgia 字体，不引入 Inter、Roboto、system-ui。
 - 保持单一 WebGL 主体，不增加第二个竞争 3D 物体。
 - 当前主体是 recursive monolith，不是薄 slab、圆环、洞、物理刚体或房间里的物体。

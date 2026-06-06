@@ -90,7 +90,7 @@ The visitor should leave thinking:
 - Do not turn the site into a text-heavy philosophy essay.
 - Do not turn interaction into a game or physics toy.
 - Do not add multiple competing 3D focal objects.
-- Do not change the current deep valley and warm off-white identity without a separate design decision.
+- Do not change the current `#142334` + `#baccd9` page chrome identity without a separate design decision; do not recolor WebGL monolith materials as part of a CSS/page-chrome color pass.
 - Do not use bounce, elastic, or playful overshoot.
 - Do not use Inter, Roboto, or system-ui for page text.
 - Keep performance stable on mobile and desktop.

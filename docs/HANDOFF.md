@@ -4,7 +4,7 @@
 
 当前首页仍是 noobli 的中文优先空间化个人主页，不是简历页、项目列表页或文章索引页。页面通过五个阶段表达观察、因果、递归、自指、重构。
 
-本轮关键变化：WebGL 主体已经从物理 slab / room 方向转为固定的 recursive fossil monolith，并在页面色彩和文案上转向 dream valley interface。它是一个厚重、可观测的深色碑体，概念藏在 GLB 形体、递归材质、刻线感、旧金色微光和镜头叙事里。
+本轮关键变化：WebGL 主体已经从物理 slab / room 方向转为固定的 recursive fossil monolith。页面 DOM/chrome 色彩收敛为 `#142334` + `#baccd9` 双色撞色；WebGL canvas 透明，背景交给 CSS，monolith 只保留一盏主 `directionalLight`、recursive shader 高光、procedural stone texture 和 `ContactShadows`。它是一个厚重、可观测的深色碑体，概念藏在 GLB 形体、递归材质、刻线感、旧金色微光和镜头叙事里。
 
 ## 当前实现
 
@@ -12,13 +12,13 @@
   - 仍是 DOM 叙事、指针、滚动状态的主要 owner。
   - 使用统一 rAF 循环写入 narrative presence、title counter-parallax、`coreInteractionRef`、`sceneStateRef`。
   - 使用 Lenis + ScrollTrigger 获取滚动进度和滚动节奏。
-  - 等待 fonts ready + WebGL scene ready 后卸载 `scene-preloader`。
+  - 等待 fonts ready + GLB monolith mount ready 后卸载 `scene-preloader`；Canvas 创建本身不会提前放行。
 
 - `WebGLSlab.tsx`
   - 文件名保留旧称，但当前内容不是薄 slab。
-  - 渲染一个 R3F Canvas，包含固定 `BgQuad` 背景和单一 GLB recursive fossil monolith 主体。
+  - 渲染一个透明背景的 R3F Canvas，只包含单一 GLB recursive fossil monolith 主体、一盏主光和 `ContactShadows`。
   - 主体来自 `public/models/black-layered-prism.optimized.glb`。
-  - 通过 `CAMERA_RAIL_DESKTOP` / `CAMERA_RAIL_COMPACT` 做镜头叙事。
+  - 通过 `CAMERA_RAIL_DESKTOP` / `CAMERA_RAIL_COMPACT` 做镜头叙事；运行时用 damped `scrollProgress` 沿连续 Catmull-Rom path 采样 camera position / look-at，避免阶段内停住或突然加速。
   - 通过 `onBeforeCompile` 给导入材质注入 `threshold`、`engraving`、`feedback`、`compression`、`signal` uniform。
   - 使用 procedural stone texture、bump、roughness 和 `ContactShadows` 增强可观测实体感。
   - 没有 Rapier、RigidBody、Collider、room bounds、gravity、collision、restitution 或 random impulse。
@@ -51,7 +51,7 @@
 - 不增加 room cage、粒子爆发、第二个 3D 物体或游戏化物理。
 - 主体应先像一个现实可观测物体，再承载哲学、AI、循环、自我指涉。
 - 不做圆环、断裂圆环、双环、方块挖洞、薄板。
-- 维持 deep valley + warm off-white 身份：charcoal black、smoke brown、dark forest、old gold、warm off-white。
+- 维持 `#142334` + `#baccd9` 页面 chrome 双色身份；WebGL monolith 材质色彩不要在同一类 CSS/page-chrome 调色任务里一起修改。
 - 维持 Georgia 字体。
 - CTA 继续纯 CSS hover。
 - WebGL wrapper 不随 scroll 做 DOM transform。

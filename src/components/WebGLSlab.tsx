@@ -14,64 +14,7 @@ import {
   type RecursiveFossilMaterialState,
   type SceneState,
 } from "@/lib/interaction";
-
-/* ─────────────────────────────────────────────────────────────────
-   Background shader — replaces CSS bg layers:
-     deep-space radial gradient, 64px grid, atmospheric glow
-   Rendered on an orthographic full-screen quad (fixed, no perspective).
-   ───────────────────────────────────────────────────────────────── */
-
-const bgVert = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    /* NDC fullscreen quad: ignore camera, always fill the screen at far depth.
-       position.xy in -1..1 maps directly to clip space, so the quad
-       covers the entire viewport regardless of camera position or FOV. */
-    gl_Position = vec4(position.xy, 0.999, 1.0);
-  }
-`;
-
-const bgFrag = /* glsl */ `
-  precision highp float;
-  varying vec2 vUv;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-
-  float lineField(vec2 uv, float y, float width) {
-    float line = 1.0 - smoothstep(0.0, width, abs(uv.y - y));
-    float fade = smoothstep(0.04, 0.46, uv.x) * (1.0 - smoothstep(0.56, 0.98, uv.x));
-    return line * fade;
-  }
-
-  void main() {
-    vec2 p = vUv - vec2(0.5);
-    float radial = length(p * vec2(0.92, 1.18));
-    float floorFalloff = smoothstep(0.18, 0.78, vUv.y);
-
-    vec3 deep = vec3(0.030, 0.026, 0.018);
-    vec3 top = vec3(0.086, 0.074, 0.048);
-    vec3 col = mix(top, deep, smoothstep(0.05, 0.86, radial));
-
-    float horizon = exp(-abs(vUv.y - 0.47) * 7.0) * smoothstep(0.02, 0.48, vUv.x) * (1.0 - smoothstep(0.52, 0.98, vUv.x));
-    col += vec3(0.22, 0.19, 0.13) * horizon * 0.115;
-
-    float shelfA = lineField(vUv, 0.435, 0.006);
-    float shelfB = lineField(vUv, 0.505, 0.010);
-    float shelfC = lineField(vUv, 0.585, 0.016);
-    col += vec3(0.56, 0.48, 0.34) * (shelfA * 0.025 + shelfB * 0.016 + shelfC * 0.010) * (1.0 - floorFalloff * 0.45);
-
-    float vignette = smoothstep(0.92, 0.26, radial);
-    col *= 0.72 + vignette * 0.36;
-
-    float grain = hash(floor(vUv * vec2(1280.0, 720.0)));
-    col += (grain - 0.5) * 0.012;
-
-    gl_FragColor = vec4(col, 1.0);
-  }
-`;
+import { MONOLITH_MODEL_PATH } from "@/lib/modelAssets";
 
 /* ─────────────────────────────────────────────────────────────────
    Camera narrative constants
@@ -79,7 +22,6 @@ const bgFrag = /* glsl */ `
 
 export const REST_TILT_Y = 0.18;
 
-const MONOLITH_MODEL_PATH = "/models/black-layered-prism.optimized.glb";
 const MODEL_TARGET_HEIGHT = 2.46;
 
 const CAMERA_SETTINGS = {
@@ -106,9 +48,42 @@ const CAMERA_RAIL_COMPACT = [
   { position: new THREE.Vector3(0.92, 1.00, 2.34), target: new THREE.Vector3(0.00, 0.01, 0.00), roll: 0.00 },
 ] as const;
 
-function smoothstep01(value: number): number {
+const CAMERA_PATH_DESKTOP = createCameraPath(CAMERA_RAIL_DESKTOP);
+const CAMERA_PATH_COMPACT = createCameraPath(CAMERA_RAIL_COMPACT);
+
+function smootherstep01(value: number): number {
   const t = Math.max(0, Math.min(1, value));
-  return t * t * (3 - 2 * t);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function createCameraPath(
+  rail: readonly { position: THREE.Vector3; target: THREE.Vector3; roll: number }[],
+) {
+  return {
+    position: new THREE.CatmullRomCurve3(
+      rail.map((point) => point.position),
+      false,
+      "centripetal",
+      0.5,
+    ),
+    target: new THREE.CatmullRomCurve3(
+      rail.map((point) => point.target),
+      false,
+      "centripetal",
+      0.5,
+    ),
+  };
+}
+
+function sampleRoll(
+  rail: readonly { roll: number }[],
+  progress: number,
+): number {
+  const maxIndex = rail.length - 1;
+  const scaled = Math.max(0, Math.min(1, progress)) * maxIndex;
+  const index = Math.min(maxIndex - 1, Math.floor(scaled));
+  const local = smootherstep01(scaled - index);
+  return THREE.MathUtils.lerp(rail[index].roll, rail[index + 1].roll, local);
 }
 
 function sampleCameraRail(
@@ -116,16 +91,13 @@ function sampleCameraRail(
   isCompact: boolean,
 ): { position: THREE.Vector3; target: THREE.Vector3; roll: number } {
   const rail = isCompact ? CAMERA_RAIL_COMPACT : CAMERA_RAIL_DESKTOP;
-  const index = Math.max(0, Math.min(rail.length - 1, sceneState.stageIndex));
-  const nextIndex = Math.min(rail.length - 1, index + 1);
-  const t = smoothstep01(sceneState.stageProgress);
-  const current = rail[index];
-  const next = rail[nextIndex];
+  const path = isCompact ? CAMERA_PATH_COMPACT : CAMERA_PATH_DESKTOP;
+  const progress = Math.max(0, Math.min(1, sceneState.scrollProgress));
 
   return {
-    position: current.position.clone().lerp(next.position, t),
-    target: current.target.clone().lerp(next.target, t),
-    roll: THREE.MathUtils.lerp(current.roll, next.roll, t),
+    position: path.position.getPointAt(progress),
+    target: path.target.getPointAt(progress),
+    roll: sampleRoll(rail, progress),
   };
 }
 
@@ -175,10 +147,7 @@ class SlabViewportProfile {
    ─────────────────────────────────────────────────────────────────
 
    All pointer tracking is handled by Hero.tsx (window-level pointermove).
-   This component only renders: background quad + slab mesh.
-
-   Background quad uses an orthographic camera so it stays fixed
-   regardless of the main perspective camera.
+   This component only renders the transparent WebGL scene + monolith mesh.
    ───────────────────────────────────────────────────────────────── */
 
 interface WebGLSlabProps {
@@ -209,14 +178,6 @@ export default function WebGLSlab({ coreInteractionRef, sceneStateRef, onSceneRe
 
   const dpr: [number, number] = isTouch.current ? ([1, 1] as const) : ([1, 2] as const);
 
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      onSceneReady?.();
-    }, 0);
-
-    return () => window.clearTimeout(id);
-  }, [onSceneReady]);
-
   return (
     <div
       className="webgl-stage"
@@ -246,7 +207,6 @@ export default function WebGLSlab({ coreInteractionRef, sceneStateRef, onSceneRe
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.12;
           invalidateRef.current = inv;
-          onSceneReady?.();
         }}
       >
         <PerspectiveCamera
@@ -256,25 +216,12 @@ export default function WebGLSlab({ coreInteractionRef, sceneStateRef, onSceneRe
           near={CAMERA_SETTINGS.near}
           far={CAMERA_SETTINGS.far}
         />
-        <fog args={["#090705", 1.95, 20.2]} />
-        <hemisphereLight color="#d6c5a0" groundColor="#060504" intensity={0.82} />
-        <ambientLight color="#c7b28a" intensity={0.30} />
         <directionalLight
           color="#f0dfbd"
           intensity={4.15}
           position={[2.4, 3.2, 2.8]}
           castShadow={false}
         />
-        <directionalLight
-          color="#5f765e"
-          intensity={1.18}
-          position={[-2.2, 1.4, 1.8]}
-          castShadow={false}
-        />
-
-        {/* NDC fullscreen background quad — fixed, no perspective */}
-        <BgQuad />
-        <ProceduralEnvironment />
 
         <SlabMesh
           coreInteractionRef={coreInteractionRef}
@@ -298,80 +245,6 @@ export interface CoreInteractionState {
   vel:    THREE.Vector2;
   target: THREE.Vector2;
   active: boolean;
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   BgQuad — orthographic full-screen background
-   Renders deep-space gradient + grid + atmospheric glow.
-   Orthographic camera means it never moves with perspective.
-   ───────────────────────────────────────────────────────────────── */
-
-const BG_UNIFORMS = {};
-
-function BgQuad() {
-  return (
-    <mesh renderOrder={-1000} frustumCulled={false}>
-      <planeGeometry args={[2, 2]} />
-      <shaderMaterial
-        vertexShader={bgVert}
-        fragmentShader={bgFrag}
-        uniforms={BG_UNIFORMS}
-        depthTest={false}
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
-
-function ProceduralEnvironment() {
-  const { scene } = useThree();
-
-  useEffect(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 256;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return undefined;
-
-    const sky = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    sky.addColorStop(0.00, "#15120c");
-    sky.addColorStop(0.28, "#2d291b");
-    sky.addColorStop(0.50, "#090705");
-    sky.addColorStop(0.72, "#1d2117");
-    sky.addColorStop(1.00, "#060504");
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const warmBand = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    warmBand.addColorStop(0, "rgba(232, 184, 110, 0)");
-    warmBand.addColorStop(0.45, "rgba(216, 168, 92, 0.18)");
-    warmBand.addColorStop(0.56, "rgba(238, 216, 170, 0.11)");
-    warmBand.addColorStop(1, "rgba(232, 184, 110, 0)");
-    ctx.fillStyle = warmBand;
-    ctx.fillRect(0, 92, canvas.width, 18);
-
-    const coolBand = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    coolBand.addColorStop(0, "rgba(92, 118, 90, 0)");
-    coolBand.addColorStop(0.20, "rgba(92, 118, 90, 0.30)");
-    coolBand.addColorStop(0.45, "rgba(92, 118, 90, 0)");
-    ctx.fillStyle = coolBand;
-    ctx.fillRect(0, 48, canvas.width, 22);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.mapping = THREE.EquirectangularReflectionMapping;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.needsUpdate = true;
-    scene.environment = texture;
-
-    return () => {
-      if (scene.environment === texture) {
-        scene.environment = null;
-      }
-      texture.dispose();
-    };
-  }, [scene]);
-
-  return null;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -446,7 +319,7 @@ function SlabMesh({
     camera.rotation.z += railPose.roll;
 
     if (coreRef.current) {
-      const stageBias = sceneState.stageIndex - 2;
+      const stageBias = Math.max(0, Math.min(1, sceneState.scrollProgress)) * (CAMERA_RAIL_DESKTOP.length - 1) - 2;
       coreRef.current.position.set(0, 0, 0);
       coreRef.current.rotation.set(
         REST_TILT_Y * 0.42 + stageBias * 0.018,
@@ -550,8 +423,6 @@ function MonolithModel({
 
   return <primitive object={scene} />;
 }
-
-useGLTF.preload(MONOLITH_MODEL_PATH);
 
 function enhanceImportedMaterial(source: THREE.Material | THREE.Material[]): THREE.Material | THREE.Material[] {
   if (Array.isArray(source)) {

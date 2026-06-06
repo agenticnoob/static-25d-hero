@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -151,7 +151,7 @@ export default function Hero() {
   const setReducedMotion = useHeroStore((state) => state.setPrefersReducedMotion);
   const setViewport = useHeroStore((state) => state.setViewport);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") return;
     let cancelled = false;
 
@@ -171,27 +171,34 @@ export default function Hero() {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") return undefined;
+    const root = document.documentElement;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+
     if (isReady) {
-      document.documentElement.dataset.sceneReady = "true";
-      document.body.style.overflow = "";
+      root.dataset.sceneReady = "true";
+      root.style.overflow = previousRootOverflow;
+      document.body.style.overflow = previousBodyOverflow;
       return undefined;
     }
 
-    document.documentElement.dataset.sceneReady = "false";
+    root.dataset.sceneReady = "false";
+    root.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow = "";
-      delete document.documentElement.dataset.sceneReady;
+      root.style.overflow = previousRootOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      delete root.dataset.sceneReady;
     };
   }, [isReady]);
 
   /* ── Entrance animation ──────────────────────────────── */
   const hasRun = useRef(false);
   useEffect(() => {
-    if (typeof window === "undefined" || hasRun.current) return;
+    if (typeof window === "undefined" || hasRun.current || !isReady) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     isTouchDevice.current =
       window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
@@ -225,10 +232,10 @@ export default function Hero() {
         });
       });
     });
-  }, []);
+  }, [isReady]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !isReady) return;
 
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     gsap.registerPlugin(ScrollTrigger);
@@ -500,15 +507,16 @@ export default function Hero() {
       window.removeEventListener("touchend", onTouchEnd);
       ScrollTrigger.scrollerProxy(scroller as HTMLElement, {});
     };
-  }, [setPointerActive, setPointerCurrent, setPointerTarget, setSceneMode, setSceneState, setTouchDevice, setReducedMotion, setViewport]);
+  }, [isReady, setPointerActive, setPointerCurrent, setPointerTarget, setSceneMode, setSceneState, setTouchDevice, setReducedMotion, setViewport]);
 
   return (
     <main
       ref={heroRef}
       id="hero"
       aria-label="Recursive intelligence homepage"
-      className="relative min-h-[500svh] overflow-x-hidden"
-      style={{ isolation: "isolate" }}
+      data-ready={isReady ? "true" : "false"}
+      className="relative min-h-[500svh]"
+      style={{ isolation: "isolate", overflowX: "clip", overflowY: "visible" }}
     >
       {/* Brand */}
       <header
@@ -519,7 +527,7 @@ export default function Hero() {
           fontSize: "10px",
           letterSpacing: "0.38em",
           textTransform: "uppercase",
-          color: "rgba(240, 231, 215, 0.58)",
+          color: "rgba(186, 204, 217, 0.58)",
           fontFamily: "Georgia, serif",
           fontStyle: "italic",
         }}
@@ -529,17 +537,17 @@ export default function Hero() {
           style={{
             width: "6px",
             height: "6px",
-            border: "1px solid rgba(240, 231, 215, 0.58)",
+            border: "1px solid rgba(186, 204, 217, 0.58)",
             transform: "rotate(45deg)",
             position: "relative",
           }}
         >
           <span
             className="absolute inset-[2px]"
-            style={{ background: "rgba(240, 231, 215, 0.5)" }}
+            style={{ background: "rgba(186, 204, 217, 0.5)" }}
           />
         </span>
-        <span className="ml-[10px]" style={{ color: "#F0E7D7", fontStyle: "normal" }}>
+        <span className="ml-[10px]" style={{ color: "#baccd9", fontStyle: "normal" }}>
           noobli
         </span>
       </header>
@@ -554,7 +562,7 @@ export default function Hero() {
           fontSize: "9.5px",
           letterSpacing: "0.26em",
           textTransform: "uppercase",
-          color: "rgba(216, 190, 145, 0.36)",
+          color: "rgba(186, 204, 217, 0.40)",
           fontFamily: "Georgia, serif",
           fontStyle: "italic",
           display: "flex",
@@ -567,31 +575,19 @@ export default function Hero() {
           style={{
             width: "1px",
             height: "12px",
-            background: "rgba(216, 190, 145, 0.22)",
+            background: "rgba(186, 204, 217, 0.24)",
             display: "inline-block",
           }}
         />
         <span>recursive interface</span>
       </div>
 
-      <div className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 z-[5] h-[100svh] w-full overflow-hidden pointer-events-none">
         <WebGLSlab
           coreInteractionRef={coreInteractionRef}
           sceneStateRef={sceneStateRef}
           onSceneReady={handleSceneReady}
         />
-        {!isReady && (
-          <div
-            className="scene-preloader"
-            aria-hidden="false"
-            data-ready="false"
-          >
-            <div className="scene-preloader__mark" />
-            <div className="scene-preloader__text">
-              dream valley interface
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="relative z-20">
@@ -608,7 +604,7 @@ export default function Hero() {
       <noscript>
         <p
           style={{
-            color: "#F0E7D7",
+            color: "#baccd9",
             padding: "1rem",
             textAlign: "center",
             font: "14px/1.6 Georgia, serif",
@@ -622,6 +618,19 @@ export default function Hero() {
           文案可在没有 JavaScript 的情况下阅读；WebGL 视觉、滚动阶段和指针惯性需要脚本运行。
         </p>
       </noscript>
+
+      {!isReady && (
+        <div
+          className="scene-preloader"
+          aria-hidden="false"
+          data-ready="false"
+        >
+          <div className="scene-preloader__mark" />
+          <div className="scene-preloader__text">
+            dream valley interface
+          </div>
+        </div>
+      )}
     </main>
   );
 }

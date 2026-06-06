@@ -125,6 +125,63 @@ test("keeps cinematic stage progress bounded and settled at edges", () => {
   });
 });
 
+test("derives recursive fossil material state from stage and scroll velocity", () => {
+  const observation = interaction.deriveRecursiveFossilMaterialState({
+    rawScrollProgress: 0,
+    scrollProgress: 0,
+    stageIndex: 0,
+    stageProgress: 0,
+    scrollVelocity: 0,
+  });
+
+  const recursion = interaction.deriveRecursiveFossilMaterialState({
+    rawScrollProgress: 0.5,
+    scrollProgress: 0.5,
+    stageIndex: 2,
+    stageProgress: 0.5,
+    scrollVelocity: 0.8,
+  });
+
+  const reconstruction = interaction.deriveRecursiveFossilMaterialState({
+    rawScrollProgress: 1,
+    scrollProgress: 1,
+    stageIndex: 4,
+    stageProgress: 1,
+    scrollVelocity: 0.4,
+  });
+
+  assert.equal(observation.threshold < recursion.threshold, true);
+  assert.equal(recursion.feedback > observation.feedback, true);
+  assert.equal(reconstruction.compression < recursion.compression, true);
+  assert.equal(reconstruction.signal > observation.signal, true);
+});
+
+test("recursive fossil material state clamps values and honors reduced motion", () => {
+  const normal = interaction.deriveRecursiveFossilMaterialState({
+    rawScrollProgress: 99,
+    scrollProgress: 99,
+    stageIndex: 99,
+    stageProgress: 99,
+    scrollVelocity: 99,
+  });
+  const reduced = interaction.deriveRecursiveFossilMaterialState(
+    {
+      rawScrollProgress: 99,
+      scrollProgress: 99,
+      stageIndex: 99,
+      stageProgress: 99,
+      scrollVelocity: 99,
+    },
+    { reducedMotion: true },
+  );
+
+  for (const value of Object.values(normal)) {
+    assert.equal(value >= 0 && value <= 1, true);
+  }
+  assert.equal(reduced.feedback < normal.feedback, true);
+  assert.equal(reduced.compression < normal.compression, true);
+});
+
 test("homepage has exactly five stages in expected order and schema", () => {
   const sections = homepage.homepageSections;
 
@@ -175,5 +232,28 @@ test("homepage avoids traditional resume-style section vocabulary", () => {
     for (const token of forbidden) {
       assert.equal(text.includes(token), false, `${section.stage} contains forbidden token: ${token}`);
     }
+  }
+});
+
+test("homepage copy uses dream-valley interface language without copying reference phrases", () => {
+  const text = homepage.homepageSections
+    .map((section) => `${section.kicker} ${section.title} ${section.body} ${(section.signals || []).join(" ")}`)
+    .join(" ")
+    .toLowerCase();
+
+  for (const token of ["梦", "山谷", "界面", "递归"]) {
+    assert.equal(text.includes(token), true, `missing tone token: ${token}`);
+  }
+
+  const copiedReferencePhrases = [
+    "i am a valley of peace",
+    "see you in the dreams",
+    "among these mountains",
+    "place of power",
+    "where the mountains speak",
+  ];
+
+  for (const phrase of copiedReferencePhrases) {
+    assert.equal(text.includes(phrase), false, `copy includes reference phrase: ${phrase}`);
   }
 });

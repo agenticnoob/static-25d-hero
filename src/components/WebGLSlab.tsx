@@ -1,13 +1,19 @@
 "use client";
 
 import {
+  Suspense,
+  useEffect,
   useRef,
   useMemo,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { PerspectiveCamera } from "@react-three/drei";
+import { ContactShadows, PerspectiveCamera, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import type { SceneState } from "@/lib/interaction";
+import {
+  deriveRecursiveFossilMaterialState,
+  type RecursiveFossilMaterialState,
+  type SceneState,
+} from "@/lib/interaction";
 
 /* ─────────────────────────────────────────────────────────────────
    Background shader — replaces CSS bg layers:
@@ -45,17 +51,17 @@ const bgFrag = /* glsl */ `
     float radial = length(p * vec2(0.92, 1.18));
     float floorFalloff = smoothstep(0.18, 0.78, vUv.y);
 
-    vec3 deep = vec3(0.028, 0.033, 0.050);
-    vec3 top = vec3(0.063, 0.073, 0.095);
+    vec3 deep = vec3(0.030, 0.026, 0.018);
+    vec3 top = vec3(0.086, 0.074, 0.048);
     vec3 col = mix(top, deep, smoothstep(0.05, 0.86, radial));
 
     float horizon = exp(-abs(vUv.y - 0.47) * 7.0) * smoothstep(0.02, 0.48, vUv.x) * (1.0 - smoothstep(0.52, 0.98, vUv.x));
-    col += vec3(0.16, 0.19, 0.21) * horizon * 0.105;
+    col += vec3(0.22, 0.19, 0.13) * horizon * 0.115;
 
     float shelfA = lineField(vUv, 0.435, 0.006);
     float shelfB = lineField(vUv, 0.505, 0.010);
     float shelfC = lineField(vUv, 0.585, 0.016);
-    col += vec3(0.50, 0.50, 0.47) * (shelfA * 0.025 + shelfB * 0.016 + shelfC * 0.010) * (1.0 - floorFalloff * 0.45);
+    col += vec3(0.56, 0.48, 0.34) * (shelfA * 0.025 + shelfB * 0.016 + shelfC * 0.010) * (1.0 - floorFalloff * 0.45);
 
     float vignette = smoothstep(0.92, 0.26, radial);
     col *= 0.72 + vignette * 0.36;
@@ -68,172 +74,13 @@ const bgFrag = /* glsl */ `
 `;
 
 /* ─────────────────────────────────────────────────────────────────
-   Slab vertex shader
-   ───────────────────────────────────────────────────────────────── */
-
-const slabVert = /* glsl */ `
-  uniform float uTime;
-  uniform float uInertia;
-  varying vec2 vUv;
-  varying vec3 vNormal;
-  varying float vWarp;
-
-  void main() {
-    vUv     = uv;
-    vNormal = normalize(normalMatrix * normal);
-
-    vec3 p = position;
-    float topMask = smoothstep(-0.10, 0.62, normal.y);
-    vec2 centered = uv - vec2(0.5);
-    float feedbackWave = sin((uv.x * 2.0 + uv.y * 1.35 + uTime * 0.10) * 6.28318);
-    float shear = centered.x * 0.018 + centered.y * 0.010;
-    vWarp = topMask * (feedbackWave * 0.004 + shear * 0.002) * (1.0 + uInertia * 0.18);
-
-    p.y += vWarp * (1.0 + uInertia * 0.45);
-    p.z += vWarp * 0.35;
-    p.x += vWarp * 0.24;
-
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-  }
-`;
-
-/* ─────────────────────────────────────────────────────────────────
-   Slab fragment shader
-   ───────────────────────────────────────────────────────────────── */
-
-const slabFrag = /* glsl */ `
-  precision highp float;
-  uniform float uTime;
-  uniform vec2  uMouse;
-  uniform float uInertia;
-  uniform float uImpact;
-  varying vec2 vUv;
-  varying vec3 vNormal;
-  varying float vWarp;
-
-  float grid(vec2 uv, float spacing) {
-    vec2 g = abs(fract(uv / spacing - 0.5) / fwidth(uv / spacing));
-    return 1.0 - min(min(g.x, g.y), 1.0);
-  }
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(hash(i),               hash(i + vec2(1.0, 0.0)), f.x),
-      mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-      f.y
-    );
-  }
-
-  float sdSegment(vec2 p, vec2 a, vec2 b) {
-    vec2 pa = p - a;
-    vec2 ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    return length(pa - ba * h);
-  }
-
-  void main() {
-    vec3 col = vec3(0.075, 0.080, 0.082);
-    col += noise(vUv * 86.0) * 0.026;
-    col += noise(vUv * 220.0) * 0.010;
-    col += vec3(0.58, 0.56, 0.50) * clamp(vWarp * 1.8, -0.014, 0.024);
-
-    float g1 = grid(vUv, 0.165) * 0.018;
-    float g2 = grid(vUv, 0.041) * 0.004;
-
-    float diag = smoothstep(0.46, 0.50, abs(vUv.x - vUv.y)) * 0.04;
-    diag *= step(0.1, vUv.x) * step(vUv.x, 0.9)
-          * step(0.1, vUv.y) * step(vUv.y, 0.9);
-
-    col += vec3(0.42, 0.40, 0.35) * max(g1, g2) * 0.45
-         + vec3(0.46, 0.44, 0.38) * diag * 0.09;
-
-    float edgeDist = min(vUv.y, 1.0 - vUv.y);
-    float edge = 1.0 - smoothstep(0.0, 0.075, edgeDist);
-    col -= vec3(0.05, 0.05, 0.045) * edge * 0.50;
-    col += vec3(0.82, 0.78, 0.66) * edge * 0.16;
-
-    vec3 lightDir = normalize(vec3(0.2, 1.0, 0.4));
-    float diffuse = clamp(dot(vNormal, lightDir), 0.0, 1.0);
-    float underside = smoothstep(-0.74, 0.15, vNormal.y);
-    col *= 0.46 + underside * 0.66;
-    col += vec3(0.26, 0.25, 0.21) * diffuse * 0.30;
-
-    float dist  = abs(vUv.y - 0.5);
-    float pulse = 0.48 + sin(uTime * 0.16 + vUv.x * 6.28318) * 0.52;
-    float glow  = clamp(1.0 - dist / 0.22, 0.0, 1.0) * pulse * 0.010;
-    col += vec3(0.78, 0.74, 0.64) * glow;
-
-    float observeSweep = 1.0 - smoothstep(0.004, 0.018, abs(vUv.x - (0.5 + uMouse.x * 0.09 + sin(uTime * 0.35 + vUv.y * 8.0) * 0.008)));
-    float observeNode = 1.0 - smoothstep(0.008, 0.020, abs(vUv.y - (0.5 + uMouse.y * 0.05 + cos(uTime * 0.28 + vUv.x * 8.0) * 0.005)));
-    col += vec3(0.86, 0.82, 0.72) * (observeSweep * 0.20 + observeNode * 0.08) * (0.25 + 1.0 * uInertia) * 0.020;
-
-    float impactRim = 1.0 - smoothstep(0.0, 0.34, length(vUv - vec2(0.5, 0.5)));
-    float impactGlint = pow(max(vNormal.y, 0.0), 2.0) * impactRim * uImpact;
-    float fresnel = pow(1.0 - clamp(dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 2.0);
-    float rim = pow(fresnel, 1.45);
-    col += vec3(0.92, 0.88, 0.78) * rim * 0.105;
-    col += vec3(1.0, 0.96, 0.86) * impactGlint * 0.34;
-    col -= vec3(0.04, 0.04, 0.035) * (1.0 - fresnel) * (0.34 + uImpact * 0.54);
-    col += vec3(0.86, 0.82, 0.72) * clamp(abs(uImpact), 0.0, 1.0) * (0.8 - fresnel) * 0.08;
-
-    float traceA = 1.0 - smoothstep(0.004, 0.018, abs(vUv.y - (0.32 + floor(vUv.x * 5.0) * 0.058)));
-    float traceB = 1.0 - smoothstep(0.006, 0.022, abs(vUv.x - (0.22 + floor(vUv.y * 4.0) * 0.075)));
-    float traceC = 1.0 - smoothstep(0.008, 0.026, abs(vUv.y - 0.5));
-    float chainPulse = 0.64 + sin(uTime * 0.42 + vUv.x * 6.28318) * 0.36;
-    float traceNodes =
-      (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.13, 0.30)))) +
-      (1.0 - smoothstep(0.012, 0.038, length(vUv - vec2(0.88, 0.59)))) +
-      (1.0 - smoothstep(0.010, 0.034, length(vUv - vec2(0.58, 0.48))));
-    col += vec3(0.64, 0.61, 0.52) * (traceA * 0.018 + traceB * 0.014 + traceC * 0.008) * chainPulse;
-    col += vec3(0.86, 0.82, 0.72) * traceNodes * 0.012;
-
-    float mirrorLine = 1.0 - smoothstep(0.002, 0.014, abs(vUv.x - 0.5));
-    float mirrorEcho = 1.0 - smoothstep(0.012, 0.060, abs(vUv.x - (1.0 - vUv.y * 0.18 - 0.41)));
-    float lens = exp(-length((vUv - vec2(0.5, 0.52)) * vec2(1.4, 0.85)) * 3.2);
-    vec2 mirrorTrace = vec2(1.0 - vUv.y, vUv.x);
-    float feedbackBand = 1.0 - smoothstep(0.008, 0.020, length(vUv - mirrorTrace));
-    col += vec3(0.84, 0.80, 0.70) * mirrorLine * 0.018;
-    col += vec3(0.58, 0.57, 0.52) * mirrorEcho * lens * 0.022;
-    col += vec3(0.70, 0.68, 0.61) * feedbackBand * 0.008;
-    col -= vec3(0.10, 0.10, 0.09) * lens * 0.026;
-
-    vec2 n1 = vec2(0.21, 0.31);
-    vec2 n2 = vec2(0.39, 0.66);
-    vec2 n3 = vec2(0.61, 0.39);
-    vec2 n4 = vec2(0.80, 0.72);
-    vec2 n5 = vec2(0.50, 0.28);
-    float network =
-      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n1, n2))) +
-      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n2, n3))) +
-      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n3, n4))) +
-      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n1, n5))) +
-      (1.0 - smoothstep(0.004, 0.020, sdSegment(vUv, n5, n3)));
-    float nodes =
-      (1.0 - smoothstep(0.010, 0.032, length(vUv - n1))) +
-      (1.0 - smoothstep(0.010, 0.032, length(vUv - n2))) +
-      (1.0 - smoothstep(0.010, 0.032, length(vUv - n3))) +
-      (1.0 - smoothstep(0.010, 0.032, length(vUv - n4))) +
-      (1.0 - smoothstep(0.010, 0.032, length(vUv - n5)));
-    col += vec3(0.68, 0.66, 0.58) * network * 0.020;
-    col += vec3(0.86, 0.82, 0.72) * nodes * 0.024;
-    col += vec3(0.70, 0.68, 0.60) * grid(vUv + vec2(0.012, -0.008), 0.16) * 0.006;
-    col = clamp(col, vec3(0.0), vec3(1.0));
-
-    gl_FragColor = vec4(col, 1.0);
-  }
-`;
-
-/* ─────────────────────────────────────────────────────────────────
    Camera narrative constants
    ───────────────────────────────────────────────────────────────── */
 
 export const REST_TILT_Y = 0.18;
+
+const MONOLITH_MODEL_PATH = "/models/black-layered-prism.optimized.glb";
+const MODEL_TARGET_HEIGHT = 2.46;
 
 const CAMERA_SETTINGS = {
   compact: [1.05, 1.08, 2.42] as [number, number, number],
@@ -283,14 +130,14 @@ function sampleCameraRail(
 }
 
 const ROOM_OBJECT_SETTINGS = {
-  slabGeometryScaleBaseFactor: 0.82,
-  slabCompactScale: 0.86,
-  objectScaleMax: 0.56,
-  objectScaleMin: 0.24,
-  viewportScaleMin: 0.38,
-  viewportScaleMax: 0.62,
+  slabGeometryScaleBaseFactor: 1.05,
+  slabCompactScale: 0.82,
+  objectScaleMax: 0.78,
+  objectScaleMin: 0.34,
+  viewportScaleMin: 0.44,
+  viewportScaleMax: 0.76,
   viewportScaleDivisor: 4.2,
-  viewportScaleMul: 0.62,
+  viewportScaleMul: 0.82,
 };
 
 class SlabViewportProfile {
@@ -323,137 +170,6 @@ class SlabViewportProfile {
   }
 }
 
-function createRecursiveCoreGeometry(): THREE.BufferGeometry {
-  const outline = new THREE.Shape();
-
-  outline.moveTo(-0.56, -1.24);
-  outline.lineTo(0.48, -1.20);
-  outline.bezierCurveTo(0.58, -1.06, 0.63, -0.74, 0.60, -0.38);
-  outline.lineTo(0.55, 0.82);
-  outline.bezierCurveTo(0.50, 1.08, 0.36, 1.24, 0.16, 1.30);
-  outline.lineTo(-0.18, 1.24);
-  outline.bezierCurveTo(-0.44, 1.18, -0.57, 0.98, -0.61, 0.70);
-  outline.lineTo(-0.66, -0.70);
-  outline.bezierCurveTo(-0.67, -0.98, -0.64, -1.15, -0.56, -1.24);
-
-  const geometry = new THREE.ExtrudeGeometry(outline, {
-    depth: 0.46,
-    bevelEnabled: true,
-    bevelSegments: 5,
-    bevelSize: 0.045,
-    bevelThickness: 0.055,
-    curveSegments: 18,
-    steps: 1,
-  });
-
-  geometry.center();
-  geometry.rotateY(-0.035);
-  geometry.rotateZ(0.035);
-  geometry.scale(1.08, 1.04, 1.0);
-  geometry.computeVertexNormals();
-  geometry.computeBoundingSphere();
-
-  return geometry;
-}
-
-function createLinePathGeometry(points: Array<[number, number]>): THREE.BufferGeometry {
-  const vertices: number[] = [];
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const [x1, y1] = points[index];
-    const [x2, y2] = points[index + 1];
-    vertices.push(x1, y1, 0.252, x2, y2, 0.252);
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-  return geometry;
-}
-
-const STELA_INSET_PANELS = [
-  { position: [0.00, 0.34, 0.246], scale: [0.74, 0.56, 0.018] },
-  { position: [0.03, 0.06, 0.258], scale: [0.54, 0.34, 0.020] },
-  { position: [0.07, -0.10, 0.270], scale: [0.34, 0.18, 0.022] },
-  { position: [-0.11, -0.60, 0.248], scale: [0.58, 0.42, 0.014] },
-  { position: [-0.08, -0.62, 0.262], scale: [0.40, 0.24, 0.018] },
-] as const;
-
-const STELA_RIDGE_PANELS = [
-  { position: [-0.46, 0.10, 0.286], scale: [0.040, 1.55, 0.040] },
-  { position: [0.46, -0.12, 0.280], scale: [0.038, 1.18, 0.036] },
-  { position: [-0.05, 1.03, 0.276], scale: [0.52, 0.042, 0.034] },
-  { position: [0.02, -1.02, 0.278], scale: [0.72, 0.050, 0.038] },
-] as const;
-
-const STELA_LINE_PATHS: Array<Array<[number, number]>> = [
-  [[-0.31, 0.55], [-0.12, 0.55], [-0.12, 0.36], [0.20, 0.36], [0.20, 0.10], [-0.02, 0.10]],
-  [[0.29, 0.48], [0.06, 0.48], [0.06, 0.22], [-0.22, 0.22], [-0.22, -0.02], [0.12, -0.02]],
-  [[-0.30, -0.48], [0.21, -0.48], [0.21, -0.68], [-0.05, -0.68], [-0.05, -0.82], [-0.27, -0.82]],
-  [[-0.40, -0.92], [-0.40, 0.76], [-0.24, 0.76], [-0.24, 0.64]],
-  [[0.39, -0.70], [0.39, 0.82], [0.18, 0.82], [0.18, 0.66]],
-];
-
-function createSlabUniforms(): SlabUniforms {
-  return {
-    uTime: { value: 0 },
-    uMouse: { value: new THREE.Vector2(0, 0) },
-    uInertia: { value: 0 },
-    uImpact: { value: 0 },
-  };
-}
-
-function applySlabUniforms(
-  uniforms: SlabUniforms,
-  options: {
-    clock: { getElapsedTime: () => number };
-    impact: number;
-    inertia: number;
-    interactionState: CoreInteractionState;
-    reducedMotion: boolean;
-  }
-): void {
-  if (!uniforms) {
-    return;
-  }
-
-  const uMouse = uniforms.uMouse;
-  const uInertia = uniforms.uInertia;
-  const uImpact = uniforms.uImpact;
-  const uTime = uniforms.uTime;
-
-  if (
-    !uMouse ||
-    !uInertia ||
-    !uImpact ||
-    !uTime
-  ) {
-    return;
-  }
-
-  if (!uMouse.value || !(uMouse.value instanceof THREE.Vector2)) {
-    uMouse.value = new THREE.Vector2(0, 0);
-  }
-
-  if (typeof uInertia.value !== "number") {
-    uInertia.value = 0;
-  }
-  if (typeof uImpact.value !== "number") {
-    uImpact.value = 0;
-  }
-  if (typeof uTime.value !== "number") {
-    uTime.value = 0;
-  }
-
-  uMouse.value.set(
-    options.interactionState.pos.x * 1.6,
-    options.interactionState.pos.y * 1.6
-  );
-  uInertia.value = options.reducedMotion ? 0 : options.inertia;
-  uImpact.value = options.impact;
-  uTime.value = options.reducedMotion
-    ? 0
-    : options.clock.getElapsedTime();
-}
-
 /* ─────────────────────────────────────────────────────────────────
    WebGLSlab
    ─────────────────────────────────────────────────────────────────
@@ -468,14 +184,13 @@ function applySlabUniforms(
 interface WebGLSlabProps {
   coreInteractionRef: React.MutableRefObject<CoreInteractionState>;
   sceneStateRef: React.MutableRefObject<SceneState>;
+  onSceneReady?: () => void;
 }
 
-export default function WebGLSlab({ coreInteractionRef, sceneStateRef }: WebGLSlabProps) {
+export default function WebGLSlab({ coreInteractionRef, sceneStateRef, onSceneReady }: WebGLSlabProps) {
   const invalidateRef = useRef<() => void>(() => {});
-
-  const slabUniforms = useMemo(
-    () => createSlabUniforms(),
-    []
+  const fossilStateRef = useRef<RecursiveFossilMaterialState>(
+    deriveRecursiveFossilMaterialState(sceneStateRef.current)
   );
 
   const isTouch = useRef(
@@ -493,6 +208,14 @@ export default function WebGLSlab({ coreInteractionRef, sceneStateRef }: WebGLSl
     : CAMERA_SETTINGS.desktop;
 
   const dpr: [number, number] = isTouch.current ? ([1, 1] as const) : ([1, 2] as const);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      onSceneReady?.();
+    }, 0);
+
+    return () => window.clearTimeout(id);
+  }, [onSceneReady]);
 
   return (
     <div
@@ -519,7 +242,12 @@ export default function WebGLSlab({ coreInteractionRef, sceneStateRef }: WebGLSl
           display: "block",
           background: "transparent",
         }}
-        onCreated={({ invalidate: inv }) => { invalidateRef.current = inv; }}
+        onCreated={({ gl, invalidate: inv }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.12;
+          invalidateRef.current = inv;
+          onSceneReady?.();
+        }}
       >
         <PerspectiveCamera
           makeDefault
@@ -528,18 +256,34 @@ export default function WebGLSlab({ coreInteractionRef, sceneStateRef }: WebGLSl
           near={CAMERA_SETTINGS.near}
           far={CAMERA_SETTINGS.far}
         />
-        <fog args={["#0A0C12", 1.95, 20.2]} />
+        <fog args={["#090705", 1.95, 20.2]} />
+        <hemisphereLight color="#d6c5a0" groundColor="#060504" intensity={0.82} />
+        <ambientLight color="#c7b28a" intensity={0.30} />
+        <directionalLight
+          color="#f0dfbd"
+          intensity={4.15}
+          position={[2.4, 3.2, 2.8]}
+          castShadow={false}
+        />
+        <directionalLight
+          color="#5f765e"
+          intensity={1.18}
+          position={[-2.2, 1.4, 1.8]}
+          castShadow={false}
+        />
 
         {/* NDC fullscreen background quad — fixed, no perspective */}
         <BgQuad />
+        <ProceduralEnvironment />
 
         <SlabMesh
-          slabUniforms={slabUniforms}
           coreInteractionRef={coreInteractionRef}
           sceneStateRef={sceneStateRef}
+          fossilStateRef={fossilStateRef}
           invalidateRef={invalidateRef}
           prefersReducedMotion={prefersReducedMotion.current}
           cameraBasePosition={cameraPos}
+          onSceneReady={onSceneReady}
         />
       </Canvas>
     </div>
@@ -579,37 +323,81 @@ function BgQuad() {
   );
 }
 
+function ProceduralEnvironment() {
+  const { scene } = useThree();
+
+  useEffect(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return undefined;
+
+    const sky = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    sky.addColorStop(0.00, "#15120c");
+    sky.addColorStop(0.28, "#2d291b");
+    sky.addColorStop(0.50, "#090705");
+    sky.addColorStop(0.72, "#1d2117");
+    sky.addColorStop(1.00, "#060504");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const warmBand = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    warmBand.addColorStop(0, "rgba(232, 184, 110, 0)");
+    warmBand.addColorStop(0.45, "rgba(216, 168, 92, 0.18)");
+    warmBand.addColorStop(0.56, "rgba(238, 216, 170, 0.11)");
+    warmBand.addColorStop(1, "rgba(232, 184, 110, 0)");
+    ctx.fillStyle = warmBand;
+    ctx.fillRect(0, 92, canvas.width, 18);
+
+    const coolBand = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    coolBand.addColorStop(0, "rgba(92, 118, 90, 0)");
+    coolBand.addColorStop(0.20, "rgba(92, 118, 90, 0.30)");
+    coolBand.addColorStop(0.45, "rgba(92, 118, 90, 0)");
+    ctx.fillStyle = coolBand;
+    ctx.fillRect(0, 48, canvas.width, 22);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    scene.environment = texture;
+
+    return () => {
+      if (scene.environment === texture) {
+        scene.environment = null;
+      }
+      texture.dispose();
+    };
+  }, [scene]);
+
+  return null;
+}
+
 /* ─────────────────────────────────────────────────────────────────
    SlabMesh
    ───────────────────────────────────────────────────────────────── */
 
-interface SlabUniforms {
-  [uniform: string]: THREE.IUniform;
-  uTime: { value: number };
-  uMouse: { value: THREE.Vector2 };
-  uInertia: { value: number };
-  uImpact: { value: number };
-}
-
 interface SlabMeshProps {
-  slabUniforms: SlabUniforms;
   coreInteractionRef: React.MutableRefObject<CoreInteractionState>;
   sceneStateRef: React.MutableRefObject<SceneState>;
+  fossilStateRef: React.MutableRefObject<RecursiveFossilMaterialState>;
   invalidateRef: React.MutableRefObject<() => void>;
   prefersReducedMotion: boolean;
   cameraBasePosition: [number, number, number];
+  onSceneReady?: () => void;
 }
 
 function SlabMesh({
-  slabUniforms,
   coreInteractionRef,
   sceneStateRef,
+  fossilStateRef,
   invalidateRef,
   prefersReducedMotion,
   cameraBasePosition: _cameraBasePosition,
+  onSceneReady,
 }: SlabMeshProps) {
   void _cameraBasePosition;
-  const slabMatRef = useRef<THREE.ShaderMaterial>(null);
   const coreRef = useRef<THREE.Group>(null);
   const cameraPositionRef = useRef(new THREE.Vector3());
   const cameraTargetRef = useRef(new THREE.Vector3());
@@ -621,18 +409,13 @@ function SlabMesh({
   );
   const objectScale = viewportProfile.objectScale;
   const compactScale = viewportProfile.compactScale;
-  const recursiveCoreGeometry = useMemo(
-    () => createRecursiveCoreGeometry(),
-    []
-  );
-  const engravingGeometries = useMemo(
-    () => STELA_LINE_PATHS.map((path) => createLinePathGeometry(path)),
-    []
-  );
 
-  useFrame(({ clock }) => {
+  useFrame(() => {
     const p = coreInteractionRef.current;
     const sceneState = sceneStateRef.current;
+    fossilStateRef.current = deriveRecursiveFossilMaterialState(sceneState, {
+      reducedMotion: prefersReducedMotion,
+    });
     const railPose = sampleCameraRail(sceneState, viewportProfile.isCompact);
     if (cameraPositionRef.current.lengthSq() === 0) {
       cameraPositionRef.current.copy(railPose.position);
@@ -672,19 +455,6 @@ function SlabMesh({
       );
     }
 
-    const activeUniforms = slabMatRef.current?.uniforms ?? slabUniforms;
-    const velocityEnergy = Math.min(1, Math.abs(sceneState.scrollVelocity) * 0.75);
-    const pointerEnergy = Math.min(1, pointer.length() * 0.85);
-    if (activeUniforms) {
-      applySlabUniforms(activeUniforms as SlabUniforms, {
-        clock,
-        impact: velocityEnergy * 0.22,
-        inertia: prefersReducedMotion ? 0 : Math.min(1, velocityEnergy + pointerEnergy * 0.45),
-        interactionState: p,
-        reducedMotion: prefersReducedMotion,
-      });
-    }
-
     invalidateRef.current();
   });
 
@@ -694,56 +464,350 @@ function SlabMesh({
       position={[0, 0, 0]}
       scale={compactScale * objectScale}
     >
-      <mesh castShadow receiveShadow>
-        <primitive object={recursiveCoreGeometry} attach="geometry" />
-        <shaderMaterial
-          ref={slabMatRef}
-          vertexShader={slabVert}
-          fragmentShader={slabFrag}
-          uniforms={slabUniforms}
-          side={THREE.FrontSide}
+      <Suspense fallback={null}>
+        <MonolithModel
+          fossilStateRef={fossilStateRef}
+          onSceneReady={onSceneReady}
         />
-      </mesh>
-
-      {STELA_INSET_PANELS.map((panel, index) => (
-        <mesh
-          key={`inset-${index}`}
-          position={panel.position}
-          scale={panel.scale}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial
-            color={index < 3 ? "#07090c" : "#0b0d10"}
-            transparent
-            opacity={0.78}
-          />
-        </mesh>
-      ))}
-
-      {STELA_RIDGE_PANELS.map((panel, index) => (
-        <mesh
-          key={`ridge-${index}`}
-          position={panel.position}
-          scale={panel.scale}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial
-            color={index < 2 ? "#151612" : "#1b1a14"}
-            transparent
-            opacity={0.70}
-          />
-        </mesh>
-      ))}
-
-      {engravingGeometries.map((geometry, index) => (
-        <lineSegments key={`engraving-${index}`} geometry={geometry}>
-          <lineBasicMaterial
-            color="#c7b98d"
-            transparent
-            opacity={index < 2 ? 0.34 : 0.24}
-          />
-        </lineSegments>
-      ))}
+      </Suspense>
+      <ContactShadows
+        position={[0, -1.08, 0]}
+        scale={4.2}
+        opacity={0.22}
+        blur={2.6}
+        far={3.4}
+        resolution={256}
+        color="#020304"
+      />
     </group>
   );
+}
+
+interface RecursiveFossilUniforms {
+  uFossilThreshold: THREE.IUniform<number>;
+  uFossilEngraving: THREE.IUniform<number>;
+  uFossilFeedback: THREE.IUniform<number>;
+  uFossilCompression: THREE.IUniform<number>;
+  uFossilSignal: THREE.IUniform<number>;
+  uFossilTime: THREE.IUniform<number>;
+}
+
+function MonolithModel({
+  fossilStateRef,
+  onSceneReady,
+}: {
+  fossilStateRef: React.MutableRefObject<RecursiveFossilMaterialState>;
+  onSceneReady?: () => void;
+}) {
+  const gltf = useGLTF(MONOLITH_MODEL_PATH);
+  const readyRef = useRef(false);
+  const materialRefs = useRef<THREE.Material[]>([]);
+  const scene = useMemo(() => {
+    const clone = gltf.scene.clone(true);
+    const nextMaterials: THREE.Material[] = [];
+    clone.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        object.material = enhanceImportedMaterial(object.material);
+        if (Array.isArray(object.material)) {
+          nextMaterials.push(...object.material);
+        } else {
+          nextMaterials.push(object.material);
+        }
+        object.castShadow = true;
+        object.receiveShadow = true;
+        object.frustumCulled = true;
+      }
+    });
+
+    const bounds = new THREE.Box3().setFromObject(clone);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    bounds.getSize(size);
+    bounds.getCenter(center);
+
+    const modelHeight = Math.max(size.y, 0.001);
+    const scale = MODEL_TARGET_HEIGHT / modelHeight;
+    clone.scale.setScalar(scale);
+    clone.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+    materialRefs.current = nextMaterials;
+
+    return clone;
+  }, [gltf.scene]);
+
+  useEffect(() => {
+    if (readyRef.current) return;
+    readyRef.current = true;
+    onSceneReady?.();
+  }, [onSceneReady]);
+
+  useFrame(({ clock }) => {
+    for (const material of materialRefs.current) {
+      const uniforms = material.userData.recursiveFossilUniforms as RecursiveFossilUniforms | undefined;
+      if (!uniforms) continue;
+      updateRecursiveFossilUniforms(uniforms, fossilStateRef.current, clock.getElapsedTime());
+    }
+  });
+
+  return <primitive object={scene} />;
+}
+
+useGLTF.preload(MONOLITH_MODEL_PATH);
+
+function enhanceImportedMaterial(source: THREE.Material | THREE.Material[]): THREE.Material | THREE.Material[] {
+  if (Array.isArray(source)) {
+    return source.map((material) => enhanceImportedMaterial(material) as THREE.Material);
+  }
+
+  const material = source.clone();
+  material.side = THREE.FrontSide;
+
+  if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
+    const stoneTextures = getSharedStoneTextures();
+    material.map = material.map ?? stoneTextures.colorMap;
+    material.bumpMap = material.bumpMap ?? stoneTextures.bumpMap;
+    material.bumpScale = Math.max(material.bumpScale, 0.026);
+    material.roughnessMap = material.roughnessMap ?? stoneTextures.roughnessMap;
+    material.roughness = Math.max(material.roughness, 0.74);
+    material.metalness = Math.min(material.metalness, 0.10);
+    material.envMapIntensity = Math.min(material.envMapIntensity || 0.72, 0.82);
+    if (material instanceof THREE.MeshPhysicalMaterial) {
+      material.clearcoat = Math.min(material.clearcoat, 0.18);
+      material.clearcoatRoughness = Math.max(material.clearcoatRoughness, 0.72);
+    }
+    installRecursiveFossilShader(material);
+    material.needsUpdate = true;
+  }
+
+  return material;
+}
+
+let sharedStoneTextures: ReturnType<typeof createStoneTextures> | null = null;
+
+function getSharedStoneTextures() {
+  sharedStoneTextures ??= createStoneTextures(256);
+  return sharedStoneTextures;
+}
+
+function createRecursiveFossilUniforms(): RecursiveFossilUniforms {
+  return {
+    uFossilThreshold: { value: 0 },
+    uFossilEngraving: { value: 0 },
+    uFossilFeedback: { value: 0 },
+    uFossilCompression: { value: 0 },
+    uFossilSignal: { value: 0 },
+    uFossilTime: { value: 0 },
+  };
+}
+
+function updateRecursiveFossilUniforms(
+  uniforms: RecursiveFossilUniforms,
+  state: RecursiveFossilMaterialState,
+  time: number,
+) {
+  uniforms.uFossilThreshold.value = state.threshold;
+  uniforms.uFossilEngraving.value = state.engraving;
+  uniforms.uFossilFeedback.value = state.feedback;
+  uniforms.uFossilCompression.value = state.compression;
+  uniforms.uFossilSignal.value = state.signal;
+  uniforms.uFossilTime.value = time;
+}
+
+function installRecursiveFossilShader(material: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial) {
+  material.onBeforeCompile = (shader) => {
+    const uniforms = createRecursiveFossilUniforms();
+    Object.assign(shader.uniforms, uniforms);
+    material.userData.recursiveFossilUniforms = uniforms;
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        /* glsl */ `
+          #include <common>
+          varying vec2 vFossilUv;
+          varying vec3 vFossilWorldPosition;
+        `,
+      )
+      .replace(
+        "#include <uv_vertex>",
+        /* glsl */ `
+          #include <uv_vertex>
+          vFossilUv = uv;
+        `,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        /* glsl */ `
+          #include <begin_vertex>
+          vFossilWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        `,
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        /* glsl */ `
+          #include <common>
+          uniform float uFossilThreshold;
+          uniform float uFossilEngraving;
+          uniform float uFossilFeedback;
+          uniform float uFossilCompression;
+          uniform float uFossilSignal;
+          uniform float uFossilTime;
+          varying vec2 vFossilUv;
+          varying vec3 vFossilWorldPosition;
+
+          float fossilHash(vec2 p) {
+            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+          }
+
+          float fossilNoise(vec2 p) {
+            vec2 i = floor(p);
+            vec2 f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            return mix(
+              mix(fossilHash(i), fossilHash(i + vec2(1.0, 0.0)), f.x),
+              mix(fossilHash(i + vec2(0.0, 1.0)), fossilHash(i + vec2(1.0, 1.0)), f.x),
+              f.y
+            );
+          }
+
+          float fossilLine(float value, float center, float width) {
+            return 1.0 - smoothstep(0.0, width, abs(value - center));
+          }
+        `,
+      )
+      .replace(
+        "#include <opaque_fragment>",
+        /* glsl */ `
+          vec2 fossilUv = fract(vFossilUv * vec2(2.35, 3.35) + vec2(0.03, -0.02));
+          vec2 fossilGrid = floor(fossilUv * vec2(18.0, 28.0));
+          float fossilSample = fossilNoise(fossilGrid * 0.17 + uFossilTime * 0.012);
+          float fossilGate = step(uFossilThreshold, fossilSample);
+          float verticalTrace = fossilLine(fract(fossilUv.x * 9.0), 0.5, 0.055);
+          float horizontalTrace = fossilLine(fract(fossilUv.y * 13.0), 0.5, 0.040);
+          float diagonalTrace = fossilLine(fract((fossilUv.x + fossilUv.y) * 5.0), 0.5, 0.030);
+          float mirrorTrace = fossilLine(fossilUv.x, 1.0 - fossilUv.y, 0.032);
+          float feedbackPulse = 0.62 + sin(uFossilTime * 0.48 + fossilUv.x * 6.28318) * 0.38;
+          float compressionBand = smoothstep(0.08, 0.86, fossilUv.y) * (1.0 - smoothstep(0.84, 0.98, fossilUv.y));
+          float engraving = (verticalTrace * 0.45 + horizontalTrace * 0.34 + diagonalTrace * 0.22) * uFossilEngraving;
+          float feedback = (mirrorTrace * 0.65 + diagonalTrace * 0.28) * uFossilFeedback * feedbackPulse;
+          float compression = fossilGate * compressionBand * uFossilCompression;
+          float signal = smoothstep(0.15, 0.95, uFossilSignal) * (0.40 + fossilNoise(vFossilWorldPosition.xy * 2.4) * 0.60);
+
+          outgoingLight *= 0.76 + signal * 0.18;
+          outgoingLight -= vec3(0.050, 0.045, 0.036) * compression;
+          outgoingLight += vec3(0.74, 0.61, 0.38) * engraving * (0.13 + signal * 0.09);
+          outgoingLight += vec3(0.96, 0.79, 0.48) * feedback * 0.15;
+          outgoingLight += vec3(0.22, 0.31, 0.22) * fossilGate * uFossilSignal * 0.052;
+
+          #include <opaque_fragment>
+        `,
+      );
+  };
+
+  material.customProgramCacheKey = () => "recursive-fossil-v1";
+}
+
+function createStoneTextures(size: number) {
+  const color = new Uint8Array(size * size * 4);
+  const scalar = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const u = x / size;
+      const v = y / size;
+      const fine = fbm(u * 28.0, v * 28.0, 5);
+      const grain = fbm(u * 92.0 + 7.1, v * 92.0 - 3.7, 3);
+      const veinA = 1 - smoothstep(0.012, 0.070, Math.abs(fbm(u * 5.4 + 2.4, v * 7.2, 4) - 0.56));
+      const veinB = 1 - smoothstep(0.008, 0.052, Math.abs(fbm(u * 12.0 - 1.5, v * 9.0 + 5.0, 3) - 0.63));
+      const worn = Math.max(veinA * 0.50, veinB * 0.28);
+      const shade = 0.54 + fine * 0.36 + grain * 0.14;
+      const warm = worn * 0.42;
+      const index = (y * size + x) * 4;
+
+      color[index] = clampByte(22 * shade + 42 * warm);
+      color[index + 1] = clampByte(19 * shade + 30 * warm);
+      color[index + 2] = clampByte(15 * shade + 16 * warm);
+      color[index + 3] = 255;
+
+      const height = clampByte(76 + fine * 92 + grain * 42 + worn * 44);
+      scalar[index] = height;
+      scalar[index + 1] = clampByte(190 + fine * 54 - worn * 28);
+      scalar[index + 2] = height;
+      scalar[index + 3] = 255;
+    }
+  }
+
+  const colorMap = makeDataTexture(color, size, true);
+  const bumpMap = makeDataTexture(scalar, size, false);
+  const roughnessMap = makeDataTexture(scalar, size, false);
+
+  colorMap.repeat.set(2.6, 3.8);
+  bumpMap.repeat.set(2.6, 3.8);
+  roughnessMap.repeat.set(2.6, 3.8);
+
+  return { bumpMap, colorMap, roughnessMap };
+}
+
+function makeDataTexture(data: Uint8Array, size: number, isColor: boolean): THREE.DataTexture {
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
+  texture.needsUpdate = true;
+  if (isColor) {
+    texture.colorSpace = THREE.SRGBColorSpace;
+  }
+  return texture;
+}
+
+function fbm(x: number, y: number, octaves: number): number {
+  let value = 0;
+  let amplitude = 0.5;
+  let frequency = 1;
+  let total = 0;
+
+  for (let octave = 0; octave < octaves; octave += 1) {
+    value += noise2(x * frequency, y * frequency) * amplitude;
+    total += amplitude;
+    amplitude *= 0.5;
+    frequency *= 2;
+  }
+
+  return value / total;
+}
+
+function noise2(x: number, y: number): number {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = x - ix;
+  const fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+
+  return lerp2(
+    lerp2(hash2(ix, iy), hash2(ix + 1, iy), ux),
+    lerp2(hash2(ix, iy + 1), hash2(ix + 1, iy + 1), ux),
+    uy,
+  );
+}
+
+function hash2(x: number, y: number): number {
+  const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+  return s - Math.floor(s);
+}
+
+function lerp2(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function smoothstep(edge0: number, edge1: number, value: number): number {
+  const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function clampByte(value: number): number {
+  return Math.max(0, Math.min(255, Math.round(value)));
 }

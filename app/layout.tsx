@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "noobli — spatial AI-native interface",
+  title: "noobli — dream valley interface",
   description:
-    "noobli 的空间化个人主页，关于 AI-native interface、递归工作流、WebGL 和系统重构。",
+    "noobli 的空间化个人主页，关于梦境山谷、递归界面、WebGL 和 AI 参与后的系统重构。",
 };
 
 export default function RootLayout({
@@ -16,10 +16,10 @@ export default function RootLayout({
     <html lang="zh-CN" className="dark">
       <head>
         <meta name="color-scheme" content="dark" />
-        <meta name="theme-color" content="#05060A" />
+        <meta name="theme-color" content="#070604" />
         <link rel="icon" href="data:," />
       </head>
-      <body className="bg-[#05060A] text-[#EDE9E3] antialiased overscroll-none touch-manipulation">
+      <body className="bg-[#070604] text-[#F0E7D7] antialiased overscroll-none touch-manipulation">
         {children}
       </body>
     </html>

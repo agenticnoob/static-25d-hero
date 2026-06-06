@@ -6,7 +6,7 @@ body {
   min-height: 100%;
   margin: 0;
   overflow-x: clip;
-  background: #05060A;
+  background: #070604;
 }
 
 body {
@@ -14,30 +14,30 @@ body {
 }
 
 /* ============================================================
-   Static 2.5D Hero — Obsidian Spike Pyramid Edition
+   Static 2.5D Hero — Dream Valley Interface Edition
    Tailwind v4: theme configured via @theme directive
    ============================================================ */
 
 @theme {
-  /* Obsidian palette */
-  --color-obs-deep: #0A0C12;
-  --color-obs-base: #0F1219;
-  --color-obs-top: #161B26;
-  --color-obs-front: #0D1018;
-  --color-obs-side: #111520;
+  /* Dream valley palette */
+  --color-obs-deep: #080705;
+  --color-obs-base: #11100C;
+  --color-obs-top: #1B1911;
+  --color-obs-front: #12100B;
+  --color-obs-side: #18140D;
 
   /* Edge light */
-  --color-edge-light: rgba(80, 200, 255, 0.55);
-  --color-edge-warm: rgba(255, 170, 80, 0.22);
-  --color-edge-glow: rgba(100, 220, 255, 0.12);
+  --color-edge-light: rgba(191, 168, 115, 0.50);
+  --color-edge-warm: rgba(218, 160, 82, 0.28);
+  --color-edge-glow: rgba(162, 126, 68, 0.14);
 
-  /* Aurora */
-  --color-aurora-a: rgba(40, 10, 80, 0.22);
-  --color-aurora-b: rgba(0, 40, 70, 0.18);
-  --color-aurora-c: rgba(10, 60, 50, 0.14);
+  /* Valley atmosphere */
+  --color-aurora-a: rgba(63, 43, 20, 0.22);
+  --color-aurora-b: rgba(31, 48, 34, 0.18);
+  --color-aurora-c: rgba(82, 64, 32, 0.14);
 
   /* Ink */
-  --color-ink: #EDE9E3;
+  --color-ink: #F0E7D7;
 
   /* Typography */
   --font-serif: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
@@ -62,15 +62,72 @@ body {
   display: block;
 }
 
+/* ── Scene readiness gate ───────────────────────────────── */
+.scene-preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(240, 231, 215, 0.070), transparent 28%),
+    linear-gradient(180deg, #14110c 0%, #070604 100%);
+  color: rgba(240, 231, 215, 0.66);
+  font-family: var(--font-serif);
+  opacity: 1;
+  transition:
+    opacity 0.9s var(--ease-quiet),
+    visibility 0.9s var(--ease-quiet);
+  visibility: visible;
+}
+
+.scene-preloader[data-ready="true"] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.scene-preloader__mark {
+  position: absolute;
+  width: clamp(54px, 8vw, 92px);
+  aspect-ratio: 1 / 1.36;
+  border: 1px solid rgba(240, 231, 215, 0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 231, 215, 0.050),
+    0 0 46px rgba(191, 143, 76, 0.052);
+  transform: translateY(-18px) skewY(-2deg);
+}
+
+.scene-preloader__mark::before,
+.scene-preloader__mark::after {
+  content: "";
+  position: absolute;
+  inset: 18% 22%;
+  border: 1px solid rgba(240, 231, 215, 0.17);
+}
+
+.scene-preloader__mark::after {
+  inset: 35% 34%;
+  opacity: 0.72;
+}
+
+.scene-preloader__text {
+  margin-top: clamp(132px, 18vw, 188px);
+  font-size: 10px;
+  font-style: italic;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
 /* ── CTA — pure CSS hover/active ──────────────────────────── */
 .cta-link {
   padding: 13px 22px 13px 24px;
-  border: 1px solid rgba(237, 233, 227, 0.18);
+  border: 1px solid rgba(240, 231, 215, 0.18);
   font-size: 10.5px;
   font-family: var(--font-serif);
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(237, 233, 227, 0.75);
+  color: rgba(240, 231, 215, 0.76);
   text-decoration: none;
   transition:
     color 0.35s var(--ease-quiet),
@@ -81,22 +138,22 @@ body {
 }
 
 .cta-link:hover {
-  color: #EDE9E3;
-  border-color: rgba(237, 233, 227, 0.42);
-  background-color: rgba(237, 233, 227, 0.04);
-  box-shadow: 0 0 20px rgba(237, 233, 227, 0.08);
+  color: #F0E7D7;
+  border-color: rgba(215, 176, 108, 0.44);
+  background-color: rgba(215, 176, 108, 0.045);
+  box-shadow: 0 0 20px rgba(215, 176, 108, 0.10);
 }
 
 .cta-link:focus-visible {
-  color: #EDE9E3;
-  border-color: rgba(237, 233, 227, 0.56);
-  outline: 1px solid rgba(237, 233, 227, 0.72);
+  color: #F0E7D7;
+  border-color: rgba(240, 231, 215, 0.56);
+  outline: 1px solid rgba(240, 231, 215, 0.72);
   outline-offset: 5px;
 }
 
 .cta-link:active {
   transform: translateY(1px);
-  color: rgba(237, 233, 227, 0.9);
+  color: rgba(240, 231, 215, 0.9);
 }
 
 .cta-arrow {
@@ -235,7 +292,7 @@ body {
 }
 
 .narrative-kicker {
-  color: rgba(237, 233, 227, 0.38);
+  color: rgba(240, 231, 215, 0.40);
   font-family: var(--font-serif);
   font-size: 10px;
   font-style: italic;
@@ -245,7 +302,7 @@ body {
 }
 
 .narrative-title {
-  color: #EDE9E3;
+  color: #F0E7D7;
   font-family: var(--font-serif);
   font-size: clamp(34px, 5.2vw, 66px);
   font-weight: 400;
@@ -255,7 +312,7 @@ body {
 }
 
 .narrative-body {
-  color: rgba(237, 233, 227, 0.56);
+  color: rgba(240, 231, 215, 0.60);
   font-family: var(--font-serif);
   font-size: 15px;
   font-style: italic;
@@ -271,7 +328,7 @@ body {
   flex-wrap: wrap;
   gap: 9px 12px;
   margin-top: 26px;
-  color: rgba(237, 233, 227, 0.36);
+  color: rgba(216, 190, 145, 0.42);
   font-family: var(--font-serif);
   font-size: 10px;
   font-style: italic;
@@ -294,8 +351,8 @@ body {
   height: 1px;
   background: linear-gradient(
     90deg,
-    rgba(237, 233, 227, 0.28),
-    rgba(237, 233, 227, 0.04)
+    rgba(216, 190, 145, 0.30),
+    rgba(216, 190, 145, 0.045)
   );
 }
 
@@ -429,6 +486,12 @@ body {
 
   .narrative-body {
     font-size: 12.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-preloader {
+    transition: none;
   }
 }
 

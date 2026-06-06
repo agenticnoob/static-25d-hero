@@ -4,7 +4,7 @@
 
 当前首页仍是 noobli 的中文优先空间化个人主页，不是简历页、项目列表页或文章索引页。页面通过五个阶段表达观察、因果、递归、自指、重构。
 
-本轮关键变化：WebGL 主体已经从物理 slab / room 方向转为固定的 recursive stela。它是一个厚重、可观测的黑曜石/石墨碑体，概念藏在内凹层级、刻线和镜头叙事里。
+本轮关键变化：WebGL 主体已经从物理 slab / room 方向转为固定的 recursive fossil monolith，并在页面色彩和文案上转向 dream valley interface。它是一个厚重、可观测的深色碑体，概念藏在 GLB 形体、递归材质、刻线感、旧金色微光和镜头叙事里。
 
 ## 当前实现
 
@@ -12,16 +12,23 @@
   - 仍是 DOM 叙事、指针、滚动状态的主要 owner。
   - 使用统一 rAF 循环写入 narrative presence、title counter-parallax、`coreInteractionRef`、`sceneStateRef`。
   - 使用 Lenis + ScrollTrigger 获取滚动进度和滚动节奏。
+  - 等待 fonts ready + WebGL scene ready 后卸载 `scene-preloader`。
 
 - `WebGLSlab.tsx`
   - 文件名保留旧称，但当前内容不是薄 slab。
-  - 渲染一个 R3F Canvas，包含固定 `BgQuad` 背景和单一 recursive stela 主体。
-  - 主体由厚重 extruded geometry、front inset panels、ridge panels、engraved line paths 组成。
+  - 渲染一个 R3F Canvas，包含固定 `BgQuad` 背景和单一 GLB recursive fossil monolith 主体。
+  - 主体来自 `public/models/black-layered-prism.optimized.glb`。
   - 通过 `CAMERA_RAIL_DESKTOP` / `CAMERA_RAIL_COMPACT` 做镜头叙事。
+  - 通过 `onBeforeCompile` 给导入材质注入 `threshold`、`engraving`、`feedback`、`compression`、`signal` uniform。
+  - 使用 procedural stone texture、bump、roughness 和 `ContactShadows` 增强可观测实体感。
   - 没有 Rapier、RigidBody、Collider、room bounds、gravity、collision、restitution 或 random impulse。
 
+- `src/lib/interaction.ts`
+  - `deriveRecursiveFossilMaterialState` 是滚动阶段到材质意义的纯函数映射。
+  - 对应测试在 `tests/interaction.test.mjs`。
+
 - `src/content/homepage.ts`
-  - 五段中文叙事仍保持短句表达。
+  - 五段中文叙事保持短句表达，当前语气参考 Son Daven 的暗色、山谷、梦境式氛围，但不复制原站短语。
   - 可见文案已去掉旧 `slab` 称呼。
 
 ## 依赖状态
@@ -44,7 +51,7 @@
 - 不增加 room cage、粒子爆发、第二个 3D 物体或游戏化物理。
 - 主体应先像一个现实可观测物体，再承载哲学、AI、循环、自我指涉。
 - 不做圆环、断裂圆环、双环、方块挖洞、薄板。
-- 维持 obsidian + warm off-white 身份。
+- 维持 deep valley + warm off-white 身份：charcoal black、smoke brown、dark forest、old gold、warm off-white。
 - 维持 Georgia 字体。
 - CTA 继续纯 CSS hover。
 - WebGL wrapper 不随 scroll 做 DOM transform。
@@ -76,6 +83,6 @@ npm run build
 
 ## 下一步
 
-1. 视觉 QA 当前 recursive stela 是否仍像洞、环或薄板。
-2. 如果还不够可信，优先调厚度、边缘、材质粗糙度和前表面 recess，不要回到抽象环状符号。
+1. 视觉 QA 当前 dream valley / recursive fossil monolith 是否仍像洞、环或薄板。
+2. 如果还不够可信，优先调模型厚度、边缘、材质粗糙度和 GLB recess，不要回到抽象环状符号。
 3. 后续可把 `WebGLSlab.tsx` / `SlabMesh` 这些旧命名重命名为 stela/core，但应单独做，避免和视觉迭代混在一起。

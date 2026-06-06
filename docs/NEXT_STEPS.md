@@ -8,10 +8,10 @@
 
 ## 已确认约束
 
-- 保持 obsidian + warm off-white 视觉身份。
+- 保持 deep valley + warm off-white 视觉身份。
 - 保持 Georgia 字体，不引入 Inter、Roboto、system-ui。
 - 保持单一 WebGL 主体，不增加第二个竞争 3D 物体。
-- 当前主体是 recursive stela，不是薄 slab、圆环、洞、物理刚体或房间里的物体。
+- 当前主体是 recursive monolith，不是薄 slab、圆环、洞、物理刚体或房间里的物体。
 - 不使用 bounce、elastic、overshoot、碰撞、重力或游戏化物理。
 - CTA 继续使用纯 CSS hover，不加 React 事件处理。
 - Tailwind v4 继续通过 `@theme` 管理 token，不加入 v3 风格配置。
@@ -20,7 +20,7 @@
 
 - WebGL runtime 已移除 Rapier/room/physics/collision 方向。
 - `@react-three/rapier` 已从依赖中移除。
-- 主体改成厚重 recursive stela：厚碑体、front inset panels、ridge panels、engraved recursive paths。
+- 主体改成厚重 recursive monolith：厚碑体、front inset panels、ridge panels、engraved recursive paths。
 - 滚动叙事改由 camera rail、pointer parallax 和材质响应表达。
 - shader 中会被读成圆环的 loop/ring 纹理已移除。
 - 可见文案已去掉旧 `slab` 称呼。
@@ -29,7 +29,7 @@
 当前可回退状态：
 
 - 仍是一个 WebGL scene、一个主要对象、一个 DOM/rAF interaction owner。
-- `WebGLSlab.tsx` 和 `SlabMesh` 是遗留命名，当前实现语义已经是 stela/core。
+- `WebGLSlab.tsx` 和 `SlabMesh` 是遗留命名，当前实现语义已经是 monolith/core。
 
 ## 下一阶段任务
 
@@ -49,7 +49,7 @@
    - 保持 warm off-white 高光，不使用纯白。
 
 4. **命名清理**
-   - 单独将 `WebGLSlab.tsx`、`SlabMesh`、`slabUniforms` 等旧命名迁移到 stela/core。
+   - 单独将 `WebGLSlab.tsx`、`SlabMesh`、`slabUniforms` 等旧命名迁移到 monolith/core。
    - 这一步应单独提交，避免和视觉参数混在一起。
 
 5. **文档持续同步**

@@ -1,6 +1,6 @@
 # Spatial — 递归智能界面
 
-一个中文为主、保留一句英文 thesis 的空间化 AI-native 个人主页。页面不是简历站，也不是项目索引；它用长滚动、固定 WebGL 画布、惯性和短句叙事表达五个阶段：观察、因果、递归、自指、重构。
+一个中文为主、保留一句英文 thesis 的空间化 AI-native 个人主页。页面不是简历站，也不是项目索引；它用长滚动、固定 WebGL 画布、梦境山谷式色彩和短句叙事表达五个阶段：观察、因果、递归、自指、重构。
 
 Tech stack: **Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · Three.js / @react-three/fiber**
 
@@ -17,7 +17,7 @@ static-25d-hero/
 ├── src/components/
 │   ├── Hero.tsx          # Unified rAF loop, scroll stage state, fixed canvas wrapper
 │   ├── NarrativeSection.tsx # Five sparse Chinese narrative stages
-│   └── WebGLSlab.tsx     # Single R3F Canvas: fixed background + recursive stela object
+│   └── WebGLSlab.tsx     # Single R3F Canvas: fixed background + recursive monolith object
 ├── src/content/
 │   └── homepage.ts       # Chinese section copy and CTA
 ├── src/lib/
@@ -40,7 +40,7 @@ static-25d-hero/
 | `@tailwindcss/postcss` | 4.3.0 | Tailwind v4 PostCSS integration |
 | `three` | 0.184.0 | Raw Three.js (geometry, materials, shaders) |
 | `@react-three/fiber` | 9.6.1 | React renderer for Three.js |
-| `@react-three/drei` | 10.7.7 | Installed R3F helpers; currently unused by the active scene |
+| `@react-three/drei` | 10.7.7 | `PerspectiveCamera`, `useGLTF`, and `ContactShadows` for the active scene |
 | `typescript` | 5.9.3 | Strict type checking |
 
 No UI kit. Tailwind v4 remains the design-system layer.
@@ -58,7 +58,7 @@ The implementation currently uses one interaction stack in `Hero.tsx` + `WebGLSl
 
 Current code still keeps the per-frame DOM/pointer writes in a custom rAF loop so one owner coordinates copy presence, title counter-parallax, and WebGL state. The WebGL object is fixed in world space; scroll moves the camera rail and material response rather than a physics room.
 
-`InteractionState` in `src/lib/interaction.ts` describes the future shared source state shape. `SceneState` is the current WebGL render state passed from `Hero.tsx` to `WebGLSlab.tsx`; it stores damped scroll progress, stage index, eased stage progress, and scroll velocity.
+`InteractionState` in `src/lib/interaction.ts` describes the future shared source state shape. `SceneState` is the current WebGL render state passed from `Hero.tsx` to `WebGLSlab.tsx`; it stores damped scroll progress, stage index, eased stage progress, and scroll velocity. `deriveRecursiveFossilMaterialState` maps that render state into material parameters for the GLB monolith.
 
 ---
 
@@ -79,17 +79,17 @@ npm run start      # Serve the built output
 
 The page is a `500svh` long-scroll surface. The WebGL canvas stays fixed at `100svh`; raw scrolling drives narrative section presence, while a damped visual scroll value updates a mutable `sceneStateRef` for the R3F object. This avoids creating a fixed-position containing block bug where the canvas itself appears to fall during scroll, and keeps the WebGL narrative from feeling locked to the scrollbar.
 
-There is one WebGL focal object: a thick recursive stela, built from a dark monolithic core, inset panels, ridges, and shallow engraved line paths. It is intentionally not a thin slab, ring, through-hole, physics body, or room-bound object. Its camera pose and material response are stage-aware:
+There is one WebGL focal object: a GLB recursive monolith loaded from `public/models/black-layered-prism.optimized.glb`. It is intentionally not a thin slab, ring, through-hole, physics body, or room-bound object. Its camera pose and material response are stage-aware. The current direction is **Dream Valley Interface / Recursive Fossil**: a dark interface artifact whose surface appears compressed, engraved, mirrored, and stabilized by scroll, wrapped in smoke-brown, dark-forest, old-gold, and warm off-white tones inspired by Son Daven's atmosphere without copying its text or assets.
 
 | Stage | HTML narrative | WebGL expression |
 |-------|----------------|------------------|
-| 观察 | Centered thesis | Baseline camera pose + low-contrast observation sweep |
-| 因果 | 左侧重心 | Camera rail shifts to expose depth and side mass |
-| 递归 | 右侧重心 | Inset panels and engraved paths become the conceptual layer |
-| 自指 | 中央收束 | Camera closes in; mirror-like material traces stay restrained |
-| 重构 | 下左收束 | Camera returns to a stable architectural read |
+| 观察 | Centered thesis | Baseline camera pose + low threshold, mostly silhouette |
+| 因果 | 左侧重心 | Camera rail shifts; engraved causal traces increase |
+| 递归 | 右侧重心 | Surface feedback and compression become visible |
+| 自指 | 中央收束 | Mirror-like traces and self-reference bands intensify |
+| 重构 | 下左收束 | Compression recedes; signal stabilizes into an artifact |
 
-The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narrative sections. Background and recursive stela rendering live in one `WebGLSlab.tsx` scene (`BgQuad` + `SlabMesh`, despite the legacy component name).
+The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, mapped narrative sections, and a short scene-ready preloader. Background and recursive monolith rendering live in one `WebGLSlab.tsx` scene (`BgQuad` + `SlabMesh`, despite the legacy component name).
 
 ---
 
@@ -97,10 +97,10 @@ The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, and mapped narra
 
 Documented in full in `DESIGN.md`. Core philosophy:
 
-- **architectural** — spatial composition, isometric WebGL object as the sole focal subject
-- **restrained** — one accent color family (blue-gray), no decoration for decoration's sake
-- **quiet luxury** — low-saturation palette, editorial serif typography, generous negative space
-- **single focal object** — everything orbits the recursive stela; no competing elements
+- **architectural** — spatial composition, WebGL object as the sole focal subject
+- **restrained** — low-saturation valley tones, no decoration for decoration's sake
+- **quiet luxury** — smoke-brown depth, dark-forest wash, old-gold highlights, editorial serif typography
+- **single focal object** — everything orbits the recursive monolith; no competing elements
 - **stage-aware layout** — each viewport changes copy alignment, camera posture, and material response
 - **spatial composition** — perspective depth, layered parallax, atmospheric void behind
 
@@ -128,12 +128,15 @@ See `AGENTS.md` for:
 | Chinese section copy | `src/content/homepage.ts` |
 | CTA label / href | `src/content/homepage.ts` |
 | Brand mark / meta | `src/components/Hero.tsx` |
-| Obsidian palette | `app/globals.css` → `@theme` block |
+| Dream valley palette | `app/globals.css` → `@theme` block |
 | Narrative stage layout | `app/globals.css` → `.narrative-section--*` |
 | Scroll stage model | `src/lib/interaction.ts` |
 | WebGL camera rail | `src/components/WebGLSlab.tsx` → `CAMERA_RAIL_*` |
-| Recursive stela geometry | `src/components/WebGLSlab.tsx` → `createRecursiveCoreGeometry`, `STELA_*` |
-| Shader effects | `src/components/WebGLSlab.tsx` → `slabFrag`（基于 `uInertia`、`uImpact`、`uMouse`） |
+| Recursive monolith model | `public/models/black-layered-prism.optimized.glb` |
+| Model generation scripts | `scripts/generate-monolith.mjs`, `scripts/generate-monolith.blender.py`, `scripts/run-blender-monolith.sh` |
+| Recursive fossil state | `src/lib/interaction.ts` → `deriveRecursiveFossilMaterialState` |
+| Material effects | `src/components/WebGLSlab.tsx` → `installRecursiveFossilShader` / `onBeforeCompile` uniforms |
+| Scene ready gate | `src/components/Hero.tsx` + `WebGLSlab.tsx` `onSceneReady` |
 
 ## Documentation status
 

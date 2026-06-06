@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -54,10 +54,10 @@ const TICK_EASE = 0.055;
 const SCROLL_VELOCITY_RESPONSE = 0.22;
 
 const WARP_STAGE = {
-  enter: 0.16,
-  start: 0.34,
-  exit: 0.66,
-  vanish: 0.86,
+  enter: 0.02,
+  start: 0.20,
+  exit: 0.76,
+  vanish: 0.96,
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -105,6 +105,8 @@ export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const sectionsRef = useRef<HTMLElement[]>([]);
+  const [sceneReady, setSceneReady] = useState(false);
+  const [fontsReady, setFontsReady] = useState(false);
 
   const coreInteractionRef = useRef<{
     pos: THREE.Vector2;
@@ -134,6 +136,11 @@ export default function Hero() {
   const isTouchDevice = useRef(false);
 
   const rafRef = useRef(0);
+  const isReady = sceneReady && fontsReady;
+
+  const handleSceneReady = useCallback(() => {
+    setSceneReady(true);
+  }, []);
 
   const setPointerTarget = useHeroStore((state) => state.setPointerTarget);
   const setPointerCurrent = useHeroStore((state) => state.setPointerCurrent);
@@ -143,6 +150,43 @@ export default function Hero() {
   const setTouchDevice = useHeroStore((state) => state.setTouchDevice);
   const setReducedMotion = useHeroStore((state) => state.setPrefersReducedMotion);
   const setViewport = useHeroStore((state) => state.setViewport);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    let cancelled = false;
+
+    if (!("fonts" in document)) {
+      setFontsReady(true);
+      return;
+    }
+
+    document.fonts.ready.then(() => {
+      if (!cancelled) {
+        setFontsReady(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    if (isReady) {
+      document.documentElement.dataset.sceneReady = "true";
+      document.body.style.overflow = "";
+      return undefined;
+    }
+
+    document.documentElement.dataset.sceneReady = "false";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "";
+      delete document.documentElement.dataset.sceneReady;
+    };
+  }, [isReady]);
 
   /* ── Entrance animation ──────────────────────────────── */
   const hasRun = useRef(false);
@@ -267,7 +311,7 @@ export default function Hero() {
         const direction = sectionProgress < 0.5 ? 1 : -1;
         const inner = section.querySelector<HTMLElement>(".narrative-section-inner");
 
-        section.dataset.active = presence >= 0.58 ? "true" : "false";
+        section.dataset.active = presence >= 0.18 ? "true" : "false";
 
         if (inner) {
           const quiet = 1 - presence;
@@ -381,7 +425,7 @@ export default function Hero() {
         id: `hero-section-${index}`,
         scroller,
         trigger: section,
-        start: "top 85%",
+        start: index === 0 ? "top top" : "top 85%",
         end: `+=${sectionHeight}`,
         scrub: true,
         pin: true,
@@ -475,7 +519,7 @@ export default function Hero() {
           fontSize: "10px",
           letterSpacing: "0.38em",
           textTransform: "uppercase",
-          color: "rgba(237, 233, 227, 0.58)",
+          color: "rgba(240, 231, 215, 0.58)",
           fontFamily: "Georgia, serif",
           fontStyle: "italic",
         }}
@@ -485,17 +529,17 @@ export default function Hero() {
           style={{
             width: "6px",
             height: "6px",
-            border: "1px solid rgba(237, 233, 227, 0.58)",
+            border: "1px solid rgba(240, 231, 215, 0.58)",
             transform: "rotate(45deg)",
             position: "relative",
           }}
         >
           <span
             className="absolute inset-[2px]"
-            style={{ background: "rgba(237, 233, 227, 0.5)" }}
+            style={{ background: "rgba(240, 231, 215, 0.5)" }}
           />
         </span>
-        <span className="ml-[10px]" style={{ color: "#EDE9E3", fontStyle: "normal" }}>
+        <span className="ml-[10px]" style={{ color: "#F0E7D7", fontStyle: "normal" }}>
           noobli
         </span>
       </header>
@@ -510,7 +554,7 @@ export default function Hero() {
           fontSize: "9.5px",
           letterSpacing: "0.26em",
           textTransform: "uppercase",
-          color: "rgba(237, 233, 227, 0.32)",
+          color: "rgba(216, 190, 145, 0.36)",
           fontFamily: "Georgia, serif",
           fontStyle: "italic",
           display: "flex",
@@ -518,20 +562,36 @@ export default function Hero() {
           gap: "12px",
         }}
       >
-        <span>former frontend</span>
+        <span>dream valley</span>
         <span
           style={{
             width: "1px",
             height: "12px",
-            background: "rgba(237, 233, 227, 0.2)",
+            background: "rgba(216, 190, 145, 0.22)",
             display: "inline-block",
           }}
         />
-        <span>AI-native interface</span>
+        <span>recursive interface</span>
       </div>
 
       <div className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none">
-        <WebGLSlab coreInteractionRef={coreInteractionRef} sceneStateRef={sceneStateRef} />
+        <WebGLSlab
+          coreInteractionRef={coreInteractionRef}
+          sceneStateRef={sceneStateRef}
+          onSceneReady={handleSceneReady}
+        />
+        {!isReady && (
+          <div
+            className="scene-preloader"
+            aria-hidden="false"
+            data-ready="false"
+          >
+            <div className="scene-preloader__mark" />
+            <div className="scene-preloader__text">
+              dream valley interface
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="relative z-20">
@@ -548,7 +608,7 @@ export default function Hero() {
       <noscript>
         <p
           style={{
-            color: "#EDE9E3",
+            color: "#F0E7D7",
             padding: "1rem",
             textAlign: "center",
             font: "14px/1.6 Georgia, serif",

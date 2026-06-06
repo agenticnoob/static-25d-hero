@@ -6,7 +6,7 @@
 
 This site is a personal homepage for noobli, a former frontend engineer moving into AI-native product and interface thinking.
 
-The page should not read like a conventional portfolio. It should feel like a spatial manifesto: a quiet, high-end interface that uses WebGL, scroll, inertia, and restrained copy to express a position about the AI era.
+The page should not read like a conventional portfolio. It should feel like a spatial manifesto: a quiet, high-end dream valley interface that uses WebGL, scroll, inertia, and restrained copy to express a position about the AI era.
 
 ## Core Position
 
@@ -42,7 +42,7 @@ Secondary audience:
 
 The voice is calm, precise, and declarative.
 
-It should avoid hype, startup slogans, long essays, and obvious AI buzzwords. Philosophy should appear as structure and implication. The page may use short English statements, supported by subtle Chinese notes later if needed.
+It should avoid hype, startup slogans, long essays, and obvious AI buzzwords. Philosophy should appear as structure and implication. Current copy may borrow a dark valley, dream, stone, mist, and old-gold atmosphere, but must not copy Son Daven phrases or assets.
 
 Voice qualities:
 
@@ -51,6 +51,7 @@ Voice qualities:
 - Quietly radical
 - Systems-minded
 - Premium, restrained, low-saturation
+- Dreamlike, but still disciplined
 
 ## Main Thesis
 
@@ -89,7 +90,7 @@ The visitor should leave thinking:
 - Do not turn the site into a text-heavy philosophy essay.
 - Do not turn interaction into a game or physics toy.
 - Do not add multiple competing 3D focal objects.
-- Do not change the existing obsidian and warm off-white identity without a separate design decision.
+- Do not change the current deep valley and warm off-white identity without a separate design decision.
 - Do not use bounce, elastic, or playful overshoot.
 - Do not use Inter, Roboto, or system-ui for page text.
 - Keep performance stable on mobile and desktop.

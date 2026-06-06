@@ -34,6 +34,14 @@ export interface SceneState {
   scrollVelocity: number;
 }
 
+export interface RecursiveFossilMaterialState {
+  threshold: number;
+  engraving: number;
+  feedback: number;
+  compression: number;
+  signal: number;
+}
+
 export function clamp01(value: number): number {
   if (Number.isNaN(value)) return 0;
   return Math.max(0, Math.min(1, value));
@@ -73,4 +81,28 @@ export function getCinematicScrollStage(progress: number): {
 
 export function getStageIndex(stage: ScrollStage): number {
   return SCROLL_STAGES.indexOf(stage);
+}
+
+export function deriveRecursiveFossilMaterialState(
+  sceneState: SceneState,
+  options: { reducedMotion?: boolean } = {},
+): RecursiveFossilMaterialState {
+  const stageIndex = Math.max(0, Math.min(SCROLL_STAGES.length - 1, sceneState.stageIndex));
+  const stageProgress = clamp01(sceneState.stageProgress);
+  const scrollProgress = clamp01(sceneState.scrollProgress);
+  const velocity = options.reducedMotion ? 0 : clamp01(Math.abs(sceneState.scrollVelocity));
+  const stageT = clamp01(stageIndex / Math.max(SCROLL_STAGES.length - 1, 1));
+
+  const causality = stageIndex >= 1 ? 0.36 + stageProgress * 0.28 : stageProgress * 0.16;
+  const recursion = stageIndex >= 2 ? 0.42 + stageProgress * 0.34 : 0;
+  const selfReference = stageIndex >= 3 ? 0.34 + stageProgress * 0.34 : 0;
+  const reconstruction = stageIndex >= 4 ? stageProgress : 0;
+
+  return {
+    threshold: clamp01(0.18 + stageT * 0.46 + velocity * 0.10),
+    engraving: clamp01(0.10 + causality + reconstruction * 0.22),
+    feedback: clamp01(0.04 + recursion + selfReference * 0.26 + velocity * 0.22),
+    compression: clamp01(0.10 + recursion * 0.70 + velocity * 0.28 - reconstruction * 0.42),
+    signal: clamp01(0.12 + scrollProgress * 0.58 + reconstruction * 0.30),
+  };
 }

@@ -2,9 +2,9 @@
 
 ## 1. Aesthetic Direction
 
-**Reference point:** Architectural photography books, film noir establishing shots, Swiss editorial design, Apple product pages, Stripe spatial storytelling, Linear restraint, Vercel contrast, and Raycast-level interaction polish.
+**Reference point:** Son Daven's dark resort storytelling, architectural photography books, film noir establishing shots, Apple product-page pacing, Stripe spatial storytelling, Linear restraint, Vercel contrast, and Raycast-level interaction polish.
 
-The page should feel like a *quiet room* — not quiet because nothing is happening, but because every element that exists has earned its place.
+The page should feel like a *dream valley interface* — not a hotel page, and not a copied reference, but a quiet spatial surface where stone, mist, old-gold light, and AI-recursive interface thinking meet.
 
 The interaction target is premium product-page motion: fluid, restrained, legible, and physically believable. Avoid cheap spectacle: no random flying particles, no neon cyberpunk wash, no flashing, no crowded screen, no decorative WebGL that ignores the narrative.
 
@@ -12,42 +12,42 @@ The interaction target is premium product-page motion: fluid, restrained, legibl
 
 ## 2. Color System
 
-CSS-facing design tokens are defined in `app/globals.css` via Tailwind v4 `@theme` directive. WebGL shader colors are literal GLSL `vec3` values, but they are mapped to the same obsidian + warm off-white identity and must be updated with this section when changed.
+CSS-facing design tokens are defined in `app/globals.css` via Tailwind v4 `@theme` directive. WebGL shader colors are literal GLSL `vec3` values, but they are mapped to the same deep valley + warm off-white identity and must be updated with this section when changed.
 
-### Obsidian Palette (Background)
+### Dream Valley Palette (Background)
 
 | Token | Hex | Role |
 |-------|-----|------|
-| `--color-obs-deep` | `#0A0C12` | Deepest void, page base |
-| `--color-obs-base` | `#0F1219` | Background gradient mid |
-| `--color-obs-top` | `#161B26` | Background gradient top |
-| `--color-obs-front` | `#0D1018` | Reserved for surface contrast |
-| `--color-obs-side` | `#111520` | Reserved for 3D face shading |
+| `--color-obs-deep` | `#080705` | Deepest valley, page base |
+| `--color-obs-base` | `#11100C` | Smoke-brown background mid |
+| `--color-obs-top` | `#1B1911` | Warm upper atmosphere |
+| `--color-obs-front` | `#12100B` | Reserved for surface contrast |
+| `--color-obs-side` | `#18140D` | Reserved for 3D face shading |
 
 ### Edge Light
 
 | Token | Value | Role |
 |-------|-------|------|
-| `--color-edge-light` | `rgba(80,200,255,0.55)` | Cool blue highlight |
-| `--color-edge-warm` | `rgba(255,170,80,0.22)` | Warm counter-accent (currently unused) |
-| `--color-edge-glow` | `rgba(100,220,255,0.12)` | Atmospheric halo |
+| `--color-edge-light` | `rgba(191,168,115,0.50)` | Old-gold highlight |
+| `--color-edge-warm` | `rgba(218,160,82,0.28)` | Warm counter-accent |
+| `--color-edge-glow` | `rgba(162,126,68,0.14)` | Atmospheric halo |
 
-### Aurora Washes
+### Valley Washes
 
 | Token | Value | Role |
 |-------|-------|------|
-| `--color-aurora-a` | `rgba(40,10,80,0.22)` | Purple depth wash |
-| `--color-aurora-b` | `rgba(0,40,70,0.18)` | Blue depth wash |
-| `--color-aurora-c` | `rgba(10,60,50,0.14)` | Teal depth wash |
+| `--color-aurora-a` | `rgba(63,43,20,0.22)` | Smoke-brown depth wash |
+| `--color-aurora-b` | `rgba(31,48,34,0.18)` | Dark forest depth wash |
+| `--color-aurora-c` | `rgba(82,64,32,0.14)` | Old-gold low glow |
 
 ### Text
 
 | Token | Hex | Role |
 |-------|-----|------|
-| `--color-ink` | `#EDE9E3` | Primary text (warm off-white) |
-| *(inline styles)* | `rgba(237,233,227,0.75)` | Secondary text |
-| *(inline styles)* | `rgba(237,233,227,0.52)` | Tertiary / subtitle |
-| *(inline styles)* | `rgba(237,233,227,0.32)` | Meta / decorative |
+| `--color-ink` | `#F0E7D7` | Primary text (warm off-white) |
+| *(inline styles)* | `rgba(240,231,215,0.76)` | Secondary text |
+| *(inline styles)* | `rgba(240,231,215,0.60)` | Tertiary / subtitle |
+| *(inline styles)* | `rgba(216,190,145,0.36)` | Meta / decorative |
 
 **Constraint:** Never use pure white `#FFFFFF`. Always warm the white with cream/off-white tones.
 
@@ -86,16 +86,16 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | z-0 | Background gradient / atmosphere | 0 | Fixed WebGL `BgQuad`, no pointer parallax |
 | z-0 | Grid or soft depth field | 0 | Zero or very low |
 | z-4 | Atmospheric glow | 4 | Zero |
-| z-5 | WebGL recursive stela | 5 | Fixed object + camera rail + restrained material response |
+| z-5 | WebGL recursive monolith | 5 | Fixed object + camera rail + restrained material response |
 | z-10 | Brand / Meta | 10 | Zero |
 | z-20 | Narrative copy / CTA | 20 | Scroll stage state + CSS state transitions |
 
 ### Spatial Composition
 
-- The WebGL recursive stela is the **single focal object**. Stage effects must modify this object, not introduce a second focal mesh.
+- The WebGL recursive monolith is the **single focal object**. Stage effects must modify this object, not introduce a second focal mesh.
 - The visual field must read as foreground / midground / background:
   - Foreground: narrative copy, CTA, fine line UI, optional glass-like panels.
-  - Midground: WebGL recursive stela as the narrative object.
+  - Midground: WebGL recursive monolith as the narrative object.
   - Background: fixed atmospheric gradient, depth field, and soft shadow/glow.
 - The stela sits in the lower half of the viewport, receding toward a vanishing point.
 - The fixed WebGL wrapper must remain `top: 0`, `bottom: 100svh`, and `transform: none` during scroll.
@@ -138,7 +138,7 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 | Background | `0` | Fixed `BgQuad` shader; depth comes from gradient, grid, and atmospheric glow |
 | Title | `tx=-0.3px, ty=-0.2px` | Counter-displacement; creates depth separation from background |
 | Eyebrow / Subtitle / CTA | `0` | Text must remain legible; any parallax hurts readability |
-| WebGL stela | Camera rail + restrained pointer parallax | Fixed object, stage-aware camera position/look-at/roll, and low-amplitude material response |
+| WebGL monolith | Camera rail + restrained pointer parallax | Fixed object, stage-aware camera position/look-at/roll, and low-amplitude material response |
 
 ### WebGL Interaction Model
 
@@ -165,7 +165,7 @@ The next implementation should replace the custom rAF-driven scroll system with 
 | Smooth input | Lenis | Wheel/touch smoothing, normalized velocity, reduced-motion fallback |
 | Timeline | GSAP ScrollTrigger | `pin`, `scrub`, section progress, stage transitions |
 | Shared state | Zustand | `scrollProgress`, `scrollVelocity`, `mouse`, `viewport`, `sceneMode` |
-| WebGL rendering | Three.js / R3F / drei | Camera rail, recursive stela geometry, shader material, background scene |
+| WebGL rendering | Three.js / R3F / drei | Camera rail, recursive monolith geometry, shader material, background scene |
 | UI motion | Motion | Text entrance, CTA hover, layout transitions, subtle panel movement |
 
 One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions, and rAF all animate the same `transform` or `opacity` at the same time.
@@ -179,30 +179,26 @@ One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions
 ### Scene
 
 - **Camera:** stage-aware rail from `CAMERA_RAIL_DESKTOP` / `CAMERA_RAIL_COMPACT`, `fov 48` — restrained product-page observation rather than object physics
-- **Lighting model:** Shader-driven material response in `slabFrag` (current scene does not add dedicated `AmbientLight`/`DirectionalLight` nodes).
+- **Lighting model:** Drei/Three lights plus a procedural environment texture. Imported model materials are enhanced with `MeshStandardMaterial` / `MeshPhysicalMaterial` tuning and `onBeforeCompile` recursive fossil uniforms.
 - **Background:** Transparent (alpha canvas)
-- **drei usage:** `@react-three/drei` is installed but currently unused. Prefer `Environment`, `ContactShadows`, camera helpers, and material utilities only when they improve depth or reduce boilerplate. Do not add helper effects that become a second focal point.
+- **drei usage:** `PerspectiveCamera`, `useGLTF`, and `ContactShadows` are active. Do not add helper effects that become a second focal point.
 - **Physics usage:** none in the active scene. `@react-three/rapier` is not part of the current runtime.
 
-### Recursive Stela Mesh
+### Recursive Fossil Monolith
 
-- `createRecursiveCoreGeometry()` builds a thick, irregular extruded stela body with bevels and no through-hole.
-- `STELA_INSET_PANELS` and `STELA_RIDGE_PANELS` add dark front-surface recesses and raised architectural edges.
-- `STELA_LINE_PATHS` adds shallow engraved recursive paths on the front face.
-- The mesh group remains a single focal object; internal panels and line segments are craft details, not separate visual subjects.
+- The current visible subject is the optimized GLB at `public/models/black-layered-prism.optimized.glb`.
+- The model is scaled to `MODEL_TARGET_HEIGHT` and centered inside `MonolithModel`.
+- The mesh group remains a single focal object; imported submeshes are craft details, not separate visual subjects.
 - `CAMERA_RAIL_DESKTOP` and `CAMERA_RAIL_COMPACT` define stage-aware camera position, look-at target, and roll.
-- Custom `shaderMaterial` with:
-  - Dark obsidian / graphite body color
-  - Low-amplitude mineral noise and micro-scratches
-  - Subtle warm edge light, not pure white
-  - Very restrained grid/trace language
-  - Edge darkening (faux AO)
-  - Normal-based lighting
-  - Low radial material glow (time-driven)
-  - uMouse-driven sheen for pointer proximity
-  - uInertia-driven observation sweep and material response
-  - Restrained vertex bending via `vWarp`, driven by time + inertia
-  - Trace, mirror, and network-like surface texture
+- `deriveRecursiveFossilMaterialState()` maps `SceneState` into:
+  - `threshold` for silhouette-to-signal reveal
+  - `engraving` for causal trace intensity
+  - `feedback` for recursive and mirror-like bands
+  - `compression` for the AI-compressed fossil read
+  - `signal` for the final stabilized material response
+- `installRecursiveFossilShader()` injects uniforms into imported model materials using `onBeforeCompile`. It should remain a material layer on the single GLB subject, not a second visual system.
+- Procedural stone textures add restrained mineral grain, bump, and roughness without external image dependencies.
+- `Hero.tsx` waits for fonts and `WebGLSlab` scene readiness before removing the `scene-preloader`, preventing a black/blank first frame.
 
 Avoid circular loop/ring motifs, torus silhouettes, through-holes, thin slabs, and visible physics rooms. The object should read first as a believable artifact, then as a philosophical/AI system through its secondary details.
 
@@ -223,9 +219,9 @@ Do not add a CSS `transform`, `filter`, or `perspective` to this wrapper or any 
 Without explicit user direction, the following are **constraints**, not suggestions:
 
 - **Font:** Georgia. Never swap for Inter/Roboto/system-ui.
-- **Palette:** Obsidian + warm off-white. Never use `#FFFFFF` or saturated accent colors.
+- **Palette:** Deep valley + warm off-white. Never use `#FFFFFF` or saturated accent colors.
 - **No cheap bounce/overshoot:** no `ease-out-back`, elastic, playful rebound, rigid-body bouncing, or collision spectacle.
-- **Single focal object:** The recursive stela is the only 3D subject. Never add a second object, particle burst, room cage, or competing visual.
+- **Single focal object:** The recursive monolith is the only 3D subject. Never add a second object, particle burst, room cage, or competing visual.
 - **CTA:** Pure CSS hover, zero JS handlers. Never attach React event handlers to the CTA.
 - **Parallax:** Title counter-parallax only on non-touch devices. Narrative kicker/body/CTA = zero pointer parallax.
 - **Mobile:** DPR capped at 1. Entrance animation disabled. Parallax amplitude halved.

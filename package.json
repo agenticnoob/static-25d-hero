@@ -9,6 +9,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
+    "model:compress": "gltf-transform optimize public/models/black-layered-prism.glb public/models/black-layered-prism.optimized.glb --compress quantize --simplify true --simplify-ratio 0.32 --simplify-error 0.004 --texture-size 2048 --texture-compress webp",
+    "model:monolith": "node scripts/generate-monolith.mjs",
+    "model:monolith:blender": "scripts/run-blender-monolith.sh",
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit"
   },

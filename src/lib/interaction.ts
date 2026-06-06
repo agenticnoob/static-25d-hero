@@ -99,10 +99,10 @@ export function deriveRecursiveFossilMaterialState(
   const reconstruction = stageIndex >= 4 ? stageProgress : 0;
 
   return {
-    threshold: clamp01(0.18 + stageT * 0.46 + velocity * 0.10),
-    engraving: clamp01(0.10 + causality + reconstruction * 0.22),
+    threshold: clamp01(0.18 + stageT * 0.46 + velocity * 0.1),
+    engraving: clamp01(0.1 + causality + reconstruction * 0.22),
     feedback: clamp01(0.04 + recursion + selfReference * 0.26 + velocity * 0.22),
-    compression: clamp01(0.10 + recursion * 0.70 + velocity * 0.28 - reconstruction * 0.42),
-    signal: clamp01(0.12 + scrollProgress * 0.58 + reconstruction * 0.30),
+    compression: clamp01(0.1 + recursion * 0.7 + velocity * 0.28 - reconstruction * 0.42),
+    signal: clamp01(0.12 + scrollProgress * 0.58 + reconstruction * 0.3),
   };
 }

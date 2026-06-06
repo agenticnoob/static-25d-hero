@@ -16,16 +16,16 @@ AI 工程
 
 ## 开发时间线
 
-| 时间 | 事件 |
-|------|------|
+| 时间  | 事件                            |
+| ----- | ------------------------------- |
 | 01:09 | 开始对话，用户请求提取 PDF 文字 |
-| 01:17 | 初始化 Vite + React 项目 |
-| 01:38 | 完成所有页面构建 |
-| 01:43 | Skills 页面性能优化 |
-| 01:49 | 全项目动画性能优化 |
-| 01:57 | GitHub 仓库创建 xuli-resume |
-| 02:15 | Docker 配置与服务器部署 |
-| 02:35 | 新增 DevelopmentLog 页面 |
+| 01:17 | 初始化 Vite + React 项目        |
+| 01:38 | 完成所有页面构建                |
+| 01:43 | Skills 页面性能优化             |
+| 01:49 | 全项目动画性能优化              |
+| 01:57 | GitHub 仓库创建 xuli-resume     |
+| 02:15 | Docker 配置与服务器部署         |
+| 02:35 | 新增 DevelopmentLog 页面        |
 
 ---
 
@@ -59,22 +59,22 @@ visual-engineering agent 负责 UI 实现，Sisyphus 工作流编排任务，Met
 
 ## 工具清单
 
-| 工具 | 分类 | 链接 |
-|------|------|------|
-| OpenCode | 主环境 | [https://opencode.ai](https://opencode.ai) |
-| oh-my-openagent | Agent框架 | - |
-| Sisyphus | 任务执行 | - |
-| Metis | 审查 | - |
-| Momus | 审查 | - |
-| React | 框架 | [https://react.dev](https://react.dev) |
-| TypeScript | 语言 | [https://www.typescriptlang.org](https://www.typescriptlang.org) |
-| Vite | 构建 | [https://vitejs.dev](https://vitejs.dev) |
-| Tailwind CSS | 样式 | [https://tailwindcss.com](https://tailwindcss.com) |
-| Framer Motion | 动画 | [https://www.framer.com/motion](https://www.framer.com/motion) |
-| React Router | 路由 | [https://reactrouter.com](https://reactrouter.com) |
-| Docker | 容器 | [https://www.docker.com](https://www.docker.com) |
-| GitHub Actions | CI/CD | [https://docs.github.com/en/actions](https://docs.github.com/en/actions) |
-| Nginx | 部署 | [https://nginx.org](https://nginx.org) |
+| 工具            | 分类      | 链接                                                                     |
+| --------------- | --------- | ------------------------------------------------------------------------ |
+| OpenCode        | 主环境    | [https://opencode.ai](https://opencode.ai)                               |
+| oh-my-openagent | Agent框架 | -                                                                        |
+| Sisyphus        | 任务执行  | -                                                                        |
+| Metis           | 审查      | -                                                                        |
+| Momus           | 审查      | -                                                                        |
+| React           | 框架      | [https://react.dev](https://react.dev)                                   |
+| TypeScript      | 语言      | [https://www.typescriptlang.org](https://www.typescriptlang.org)         |
+| Vite            | 构建      | [https://vitejs.dev](https://vitejs.dev)                                 |
+| Tailwind CSS    | 样式      | [https://tailwindcss.com](https://tailwindcss.com)                       |
+| Framer Motion   | 动画      | [https://www.framer.com/motion](https://www.framer.com/motion)           |
+| React Router    | 路由      | [https://reactrouter.com](https://reactrouter.com)                       |
+| Docker          | 容器      | [https://www.docker.com](https://www.docker.com)                         |
+| GitHub Actions  | CI/CD     | [https://docs.github.com/en/actions](https://docs.github.com/en/actions) |
+| Nginx           | 部署      | [https://nginx.org](https://nginx.org)                                   |
 
 ---
 

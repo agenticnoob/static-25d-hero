@@ -21,6 +21,7 @@ AI
 大语言模型的演变遵循递归逻辑——RLHF、RLAIF、合成数据生成。模型参与自身训练，形成自增强循环。
 
 **关键要点：**
+
 - RLHF / RLAIF 训练范式
 - 合成数据与知识蒸馏
 - Self-Evolving 自演化
@@ -34,6 +35,7 @@ AI
 从被动响应到主动规划——Agent 能够自主决策、调用工具、反思迭代。Tool Use + Memory + Planning 构成核心能力。
 
 **关键要点：**
+
 - ReAct / CoT 推理模式
 - Tool Use & MCP 协议
 - Self-Reflection 自我反思
@@ -47,6 +49,7 @@ AI
 Retrieval Augmented Generation 与中间层架构。Token 优化、语义缓存、意图路由——构建高效 AI 系统的工程实践。
 
 **关键要点：**
+
 - 向量检索与上下文注入
 - Token 压缩与成本优化
 - Intent Routing 意图路由
@@ -60,6 +63,7 @@ Retrieval Augmented Generation 与中间层架构。Token 优化、语义缓存�
 从语言模型到世界模型——Yann LeCun 的 JEPA、具身智能、Neuro-Symbolic AI。多模态融合让 AI 理解物理因果。
 
 **关键要点：**
+
 - JEPA / 联合嵌入预测架构
 - 具身智能 Embodied AI
 - 物理直觉与因果推理
@@ -73,6 +77,7 @@ Retrieval Augmented Generation 与中间层架构。Token 优化、语义缓存�
 AI Alignment 与系统 Governance。目标定义、偏好学习、人类监督——确保 AI 行为符合预期的重要性。
 
 **关键要点：**
+
 - Goal Specification 目标定义
 - Preference Learning 偏好学习
 - Human-in-the-Loop 人类监督
@@ -86,6 +91,7 @@ AI Alignment 与系统 Governance。目标定义、偏好学习、人类监督�
 Cognitive Reliability——Hallucination 抑制、Eval 驱动开发、Verification 体系。构建可信赖 AI 系统的工程实践。
 
 **关键要点：**
+
 - Hallucination Detection 幻觉检测
 - Eval-Driven Development
 - Observability 可观测性
@@ -99,6 +105,7 @@ Cognitive Reliability——Hallucination 抑制、Eval 驱动开发、Verificati
 AI-Native Development、Workflow Orchestration、Multi-Agent Systems。开发者角色从"写代码"转变为"搭系统"。
 
 **关键要点：**
+
 - Agentic Workflow 工作流编排
 - Multi-Agent Coordination
 - Self-Tuning Systems 自调优
@@ -112,6 +119,7 @@ AI-Native Development、Workflow Orchestration、Multi-Agent Systems。开发者
 Goal Definition 与 Governance 将成为稀缺能力。复杂系统不会因 AI 变强而消失——人类仍是意义的定义者。
 
 **关键要点：**
+
 - Complexity 复杂度不会消失
 - Goal Definition 目标定义
 - System Governance 系统治理
@@ -125,6 +133,7 @@ Goal Definition 与 Governance 将成为稀缺能力。复杂系统不会因 AI 
 AI 能否拥有意识？具身认知、哲学僵尸、中文房间——从技术到哲学的边界探索。
 
 **关键要点：**
+
 - Embodied Cognition 具身认知
 - Chinese Room / Philosophical Zombie
 - Integrated Information Theory IIT
@@ -142,6 +151,7 @@ AI 能否拥有意识？具身认知、哲学僵尸、中文房间——从技�
 从语言瓶颈的突破到意识接入的探索，技术边界正在重新定义。
 
 **关联主题标签：**
+
 - [RLHF / RLAIF](https://blog.zzzxc.com/生存/Ai/大语言模型的演变逻辑)
 - [World Models](https://blog.zzzxc.com/生存/Ai/Ai是否能剥离语言瓶颈)
 - [Agentic AI](https://blog.zzzxc.com/生存/Ai/Agent工作过程中的大模型参与逻辑)

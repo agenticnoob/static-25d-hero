@@ -27,8 +27,7 @@ export default function VoidField() {
 
     // Detect mobile
     const isMobile =
-      window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
-      "ontouchstart" in window;
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches || "ontouchstart" in window;
 
     const PARTICLE_COUNT = isMobile ? 28 : 55;
 

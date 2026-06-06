@@ -99,12 +99,11 @@ export default function NarrativeSection({
 
         {section.cta ? (
           <div className="cta-row mt-9">
-            <a
-              href={section.cta.href}
-              className="cta-link group inline-flex items-center gap-3"
-            >
+            <a href={section.cta.href} className="cta-link group inline-flex items-center gap-3">
               <span className="cta-label">{section.cta.label}</span>
-              <span className="cta-arrow" aria-hidden="true">→</span>
+              <span className="cta-arrow" aria-hidden="true">
+                →
+              </span>
             </a>
           </div>
         ) : null}

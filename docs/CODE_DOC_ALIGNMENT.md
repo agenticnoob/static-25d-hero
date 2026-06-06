@@ -8,17 +8,17 @@ WebGL 当前保持单一 recursive fossil monolith 焦点。主体是固定 GLB 
 
 ## 对齐表
 
-| 文档位置 | 文档声明的行为 | 当前代码状态 | 处理结论 |
-| --- | --- | --- | --- |
-| `README.md` | noobli 空间化个人主页、五阶段叙事 | `src/content/homepage.ts` 与 `NarrativeSection` 已实现 5 阶段、每段 `kicker/title/body/signals` | 一致 |
-| `README.md` | 单 WebGL scene + recursive monolith 焦点，背景由 CSS 承担 | `WebGLSlab.tsx` 渲染透明 R3F scene 与一个 GLB monolith group，无第二个可见 3D 主体 | 一致 |
-| `README.md` | Lenis、GSAP、Motion、Zustand 已接入；Rapier 不在 active runtime | `Hero.tsx` 使用 Lenis/ScrollTrigger，`NarrativeSection` 使用 Motion，`heroStore` 使用 Zustand；`package.json` 不再包含 `@react-three/rapier` | 一致 |
-| `DESIGN.md` | WebGL wrapper 固定，滚动变化发生在 R3F scene 内 | `Hero.tsx` 渲染固定 WebGL wrapper，`sceneStateRef` 传入 `WebGLSlab`，scene 内通过连续 camera rail 采样和 shader uniforms 表达变化 | 一致 |
-| `DESIGN.md` | CTA 纯 CSS hover，无 React event handlers | `NarrativeSection.tsx` 只渲染 `<a>`，hover/focus 在 `app/globals.css` | 一致 |
-| `DESIGN.md` | Georgia 字体、DOM/page chrome 使用 `#142334` + `#baccd9`，WebGL 材质单独管理 | 全局 token 与组件内联样式已同步为两色体系；`WebGLSlab.tsx` 材质色彩保持原 fossil palette | 一致 |
-| `DESIGN.md` | WebGL 主体不是环、洞、薄 slab 或物理房间 | `MonolithModel` 加载 `black-layered-prism.optimized.glb`；无 Rapier/Collider/Room 代码 | 一致 |
-| `docs/NEXT_STEPS.md` | 下一步优先做视觉 QA、形体和材质打磨 | 当前代码已完成基础 recursive monolith，仍需要人工视觉判断 | 一致 |
-| `docs/superpowers/*` | 英文设计/实施计划 | 这些是历史计划，不是当前 runtime source of truth | 已标注为历史文档 |
+| 文档位置             | 文档声明的行为                                                               | 当前代码状态                                                                                                                                 | 处理结论         |
+| -------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `README.md`          | noobli 空间化个人主页、五阶段叙事                                            | `src/content/homepage.ts` 与 `NarrativeSection` 已实现 5 阶段、每段 `kicker/title/body/signals`                                              | 一致             |
+| `README.md`          | 单 WebGL scene + recursive monolith 焦点，背景由 CSS 承担                    | `WebGLSlab.tsx` 渲染透明 R3F scene 与一个 GLB monolith group，无第二个可见 3D 主体                                                           | 一致             |
+| `README.md`          | Lenis、GSAP、Motion、Zustand 已接入；Rapier 不在 active runtime              | `Hero.tsx` 使用 Lenis/ScrollTrigger，`NarrativeSection` 使用 Motion，`heroStore` 使用 Zustand；`package.json` 不再包含 `@react-three/rapier` | 一致             |
+| `DESIGN.md`          | WebGL wrapper 固定，滚动变化发生在 R3F scene 内                              | `Hero.tsx` 渲染固定 WebGL wrapper，`sceneStateRef` 传入 `WebGLSlab`，scene 内通过连续 camera rail 采样和 shader uniforms 表达变化            | 一致             |
+| `DESIGN.md`          | CTA 纯 CSS hover，无 React event handlers                                    | `NarrativeSection.tsx` 只渲染 `<a>`，hover/focus 在 `app/globals.css`                                                                        | 一致             |
+| `DESIGN.md`          | Georgia 字体、DOM/page chrome 使用 `#142334` + `#baccd9`，WebGL 材质单独管理 | 全局 token 与组件内联样式已同步为两色体系；`WebGLSlab.tsx` 材质色彩保持原 fossil palette                                                     | 一致             |
+| `DESIGN.md`          | WebGL 主体不是环、洞、薄 slab 或物理房间                                     | `MonolithModel` 加载 `black-layered-prism.optimized.glb`；无 Rapier/Collider/Room 代码                                                       | 一致             |
+| `docs/NEXT_STEPS.md` | 下一步优先做视觉 QA、形体和材质打磨                                          | 当前代码已完成基础 recursive monolith，仍需要人工视觉判断                                                                                    | 一致             |
+| `docs/superpowers/*` | 英文设计/实施计划                                                            | 这些是历史计划，不是当前 runtime source of truth                                                                                             | 已标注为历史文档 |
 
 ## 可验证行为
 

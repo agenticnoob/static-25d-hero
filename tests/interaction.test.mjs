@@ -202,7 +202,9 @@ test("homepage has exactly five stages in expected order and schema", () => {
 
 test("home page only renders CTA in reconstruction stage", () => {
   const sections = homepage.homepageSections;
-  const withCta = sections.filter((section) => section.cta && section.cta.href && section.cta.label);
+  const withCta = sections.filter(
+    (section) => section.cta && section.cta.href && section.cta.label,
+  );
 
   assert.equal(withCta.length, 1);
   assert.equal(withCta[0].stage, "reconstruction");
@@ -230,14 +232,21 @@ test("homepage avoids traditional resume-style section vocabulary", () => {
   for (const section of sections) {
     const text = `${section.kicker} ${section.title} ${section.body}`.toLowerCase();
     for (const token of forbidden) {
-      assert.equal(text.includes(token), false, `${section.stage} contains forbidden token: ${token}`);
+      assert.equal(
+        text.includes(token),
+        false,
+        `${section.stage} contains forbidden token: ${token}`,
+      );
     }
   }
 });
 
 test("homepage copy uses dream-valley interface language without copying reference phrases", () => {
   const text = homepage.homepageSections
-    .map((section) => `${section.kicker} ${section.title} ${section.body} ${(section.signals || []).join(" ")}`)
+    .map(
+      (section) =>
+        `${section.kicker} ${section.title} ${section.body} ${(section.signals || []).join(" ")}`,
+    )
     .join(" ")
     .toLowerCase();
 

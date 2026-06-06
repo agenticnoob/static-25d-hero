@@ -6,10 +6,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "@studio-freight/lenis";
 import { homepageSections } from "@/content/homepage";
-import {
-  getCinematicScrollStage,
-  getStageIndex,
-} from "@/lib/interaction";
+import { getCinematicScrollStage, getStageIndex } from "@/lib/interaction";
 import { useHeroStore } from "@/lib/heroStore";
 import WebGLSlab from "./WebGLSlab";
 import NarrativeSection from "./NarrativeSection";
@@ -55,7 +52,7 @@ const SCROLL_VELOCITY_RESPONSE = 0.22;
 
 const WARP_STAGE = {
   enter: 0.02,
-  start: 0.20,
+  start: 0.2,
   exit: 0.76,
   vanish: 0.96,
 };
@@ -201,12 +198,15 @@ export default function Hero() {
     if (typeof window === "undefined" || hasRun.current || !isReady) return;
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     isTouchDevice.current =
-      window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
-      "ontouchstart" in window;
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches || "ontouchstart" in window;
 
     hasRun.current = true;
 
-    if (prefersReduced || isTouchDevice.current || typeof window.requestAnimationFrame !== "function") {
+    if (
+      prefersReduced ||
+      isTouchDevice.current ||
+      typeof window.requestAnimationFrame !== "function"
+    ) {
       ENTRANCE_ELEMENTS.forEach((selector) => {
         const el = document.querySelector(selector) as HTMLElement | null;
         if (!el) return;
@@ -222,8 +222,7 @@ export default function Hero() {
       const delay = ENTRANCE_DELAYS[selector] ?? 0;
       el.style.opacity = "0";
       el.style.transform = "translateY(20px)";
-      el.style.transition =
-        `opacity ${TRANSITION_DURATION} ${EASE_QUIET}, transform ${TRANSITION_DURATION} ${EASE_QUIET}`;
+      el.style.transition = `opacity ${TRANSITION_DURATION} ${EASE_QUIET}, transform ${TRANSITION_DURATION} ${EASE_QUIET}`;
       el.style.transitionDelay = `${delay}s`;
       scheduleFrame(() => {
         scheduleFrame(() => {
@@ -241,8 +240,7 @@ export default function Hero() {
     gsap.registerPlugin(ScrollTrigger);
 
     isTouchDevice.current =
-      window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
-      "ontouchstart" in window;
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches || "ontouchstart" in window;
 
     setTouchDevice(isTouchDevice.current);
     setReducedMotion(prefersReduced);
@@ -254,7 +252,7 @@ export default function Hero() {
     });
 
     sectionsRef.current = Array.from(
-      heroRef.current?.querySelectorAll<HTMLElement>(".narrative-section") ?? []
+      heroRef.current?.querySelectorAll<HTMLElement>(".narrative-section") ?? [],
     );
 
     const clamp01 = (value: number) => clamp(value, 0, 1);
@@ -325,8 +323,7 @@ export default function Hero() {
           const scale = 0.992 + presence * 0.008;
           inner.style.opacity = presence > 0.06 ? `${0.12 + presence * 0.88}` : "0";
           inner.style.filter = `blur(${(quiet * 1.35).toFixed(2)}px)`;
-          inner.style.transform =
-            `translate3d(0, ${((quiet * 18 * direction)).toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
+          inner.style.transform = `translate3d(0, ${(quiet * 18 * direction).toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
         }
       });
     };
@@ -334,24 +331,20 @@ export default function Hero() {
     const syncSceneState = (raw: number, rawVelocity: number) => {
       const clampedRaw = clamp01(raw);
       const follow = prefersReduced ? 1 : SCROLL_FOLLOW;
-      const cinematic = getCinematicScrollStage(clamp01(
-        lerp(scrollVisualProgressRef.current, clampedRaw, follow)
-      ));
+      const cinematic = getCinematicScrollStage(
+        clamp01(lerp(scrollVisualProgressRef.current, clampedRaw, follow)),
+      );
 
       const nextVisual = clamp01(lerp(scrollVisualProgressRef.current, clampedRaw, follow));
       scrollVisualProgressRef.current = nextVisual;
       const nextVelocity = lerp(
         scrollVelocityRef.current * SCROLL_VELOCITY_DAMPING,
         rawVelocity,
-        SCROLL_VELOCITY_RESPONSE
+        SCROLL_VELOCITY_RESPONSE,
       );
 
       const stageIndex = getStageIndex(cinematic.stage);
-      const clampedVelocity = clamp(
-        nextVelocity,
-        -SCROLL_VELOCITY_LIMIT,
-        SCROLL_VELOCITY_LIMIT
-      );
+      const clampedVelocity = clamp(nextVelocity, -SCROLL_VELOCITY_LIMIT, SCROLL_VELOCITY_LIMIT);
       const nextSceneState = {
         rawScrollProgress: clampedRaw,
         scrollProgress: nextVisual,
@@ -409,14 +402,19 @@ export default function Hero() {
           height: window.innerHeight,
         };
       },
-      pinType: scroller !== null && (scroller as HTMLElement).style.transform ? "transform" : "fixed",
+      pinType:
+        scroller !== null && (scroller as HTMLElement).style.transform ? "transform" : "fixed",
     });
 
     const handleLenis = (event: { scroll: number; velocity?: number }) => {
       latestScroll = event.scroll;
       const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
       const raw = clamp(latestScroll / maxScroll, 0, 1);
-      const velocity = clamp((event.velocity ?? 0) / 1200, -SCROLL_VELOCITY_LIMIT, SCROLL_VELOCITY_LIMIT);
+      const velocity = clamp(
+        (event.velocity ?? 0) / 1200,
+        -SCROLL_VELOCITY_LIMIT,
+        SCROLL_VELOCITY_LIMIT,
+      );
 
       syncSceneState(raw, prefersReduced ? 0 : velocity);
       setPointerCurrent(currentRef.current);
@@ -456,7 +454,11 @@ export default function Hero() {
       end: () => `+=${Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)}`,
       scrub: 0.1,
       onUpdate: (self) => {
-        const velocity = clamp((self.getVelocity() ?? 0) / 1200, -SCROLL_VELOCITY_LIMIT, SCROLL_VELOCITY_LIMIT);
+        const velocity = clamp(
+          (self.getVelocity() ?? 0) / 1200,
+          -SCROLL_VELOCITY_LIMIT,
+          SCROLL_VELOCITY_LIMIT,
+        );
         syncSceneState(self.progress, prefersReduced ? 0 : velocity);
         updatePresence();
       },
@@ -507,7 +509,17 @@ export default function Hero() {
       window.removeEventListener("touchend", onTouchEnd);
       ScrollTrigger.scrollerProxy(scroller as HTMLElement, {});
     };
-  }, [isReady, setPointerActive, setPointerCurrent, setPointerTarget, setSceneMode, setSceneState, setTouchDevice, setReducedMotion, setViewport]);
+  }, [
+    isReady,
+    setPointerActive,
+    setPointerCurrent,
+    setPointerTarget,
+    setSceneMode,
+    setSceneState,
+    setTouchDevice,
+    setReducedMotion,
+    setViewport,
+  ]);
 
   return (
     <main
@@ -620,15 +632,9 @@ export default function Hero() {
       </noscript>
 
       {!isReady && (
-        <div
-          className="scene-preloader"
-          aria-hidden="false"
-          data-ready="false"
-        >
+        <div className="scene-preloader" aria-hidden="false" data-ready="false">
           <div className="scene-preloader__mark" />
-          <div className="scene-preloader__text">
-            dream valley interface
-          </div>
+          <div className="scene-preloader__text">dream valley interface</div>
         </div>
       )}
     </main>

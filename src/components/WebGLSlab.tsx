@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Suspense,
-  useEffect,
-  useRef,
-  useMemo,
-} from "react";
+import { Suspense, useEffect, useRef, useMemo } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, PerspectiveCamera, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -33,19 +28,59 @@ const CAMERA_SETTINGS = {
 };
 
 const CAMERA_RAIL_DESKTOP = [
-  { position: new THREE.Vector3(1.68, 1.44, 3.25), target: new THREE.Vector3(0.00, 0.02, 0.00), roll: 0.00 },
-  { position: new THREE.Vector3(2.12, 1.18, 2.72), target: new THREE.Vector3(0.18, 0.00, -0.04), roll: -0.025 },
-  { position: new THREE.Vector3(0.78, 0.92, 2.02), target: new THREE.Vector3(0.08, -0.02, 0.00), roll: 0.035 },
-  { position: new THREE.Vector3(-0.52, 0.62, 1.76), target: new THREE.Vector3(-0.10, -0.04, 0.03), roll: -0.018 },
-  { position: new THREE.Vector3(1.28, 1.22, 2.96), target: new THREE.Vector3(0.00, 0.01, 0.00), roll: 0.00 },
+  {
+    position: new THREE.Vector3(1.68, 1.44, 3.25),
+    target: new THREE.Vector3(0.0, 0.02, 0.0),
+    roll: 0.0,
+  },
+  {
+    position: new THREE.Vector3(2.12, 1.18, 2.72),
+    target: new THREE.Vector3(0.18, 0.0, -0.04),
+    roll: -0.025,
+  },
+  {
+    position: new THREE.Vector3(0.78, 0.92, 2.02),
+    target: new THREE.Vector3(0.08, -0.02, 0.0),
+    roll: 0.035,
+  },
+  {
+    position: new THREE.Vector3(-0.52, 0.62, 1.76),
+    target: new THREE.Vector3(-0.1, -0.04, 0.03),
+    roll: -0.018,
+  },
+  {
+    position: new THREE.Vector3(1.28, 1.22, 2.96),
+    target: new THREE.Vector3(0.0, 0.01, 0.0),
+    roll: 0.0,
+  },
 ] as const;
 
 const CAMERA_RAIL_COMPACT = [
-  { position: new THREE.Vector3(1.05, 1.08, 2.42), target: new THREE.Vector3(0.00, 0.02, 0.00), roll: 0.00 },
-  { position: new THREE.Vector3(1.38, 0.98, 2.18), target: new THREE.Vector3(0.10, 0.00, -0.03), roll: -0.018 },
-  { position: new THREE.Vector3(0.42, 0.84, 1.88), target: new THREE.Vector3(0.05, -0.03, 0.00), roll: 0.020 },
-  { position: new THREE.Vector3(-0.36, 0.70, 1.82), target: new THREE.Vector3(-0.08, -0.04, 0.02), roll: -0.012 },
-  { position: new THREE.Vector3(0.92, 1.00, 2.34), target: new THREE.Vector3(0.00, 0.01, 0.00), roll: 0.00 },
+  {
+    position: new THREE.Vector3(1.05, 1.08, 2.42),
+    target: new THREE.Vector3(0.0, 0.02, 0.0),
+    roll: 0.0,
+  },
+  {
+    position: new THREE.Vector3(1.38, 0.98, 2.18),
+    target: new THREE.Vector3(0.1, 0.0, -0.03),
+    roll: -0.018,
+  },
+  {
+    position: new THREE.Vector3(0.42, 0.84, 1.88),
+    target: new THREE.Vector3(0.05, -0.03, 0.0),
+    roll: 0.02,
+  },
+  {
+    position: new THREE.Vector3(-0.36, 0.7, 1.82),
+    target: new THREE.Vector3(-0.08, -0.04, 0.02),
+    roll: -0.012,
+  },
+  {
+    position: new THREE.Vector3(0.92, 1.0, 2.34),
+    target: new THREE.Vector3(0.0, 0.01, 0.0),
+    roll: 0.0,
+  },
 ] as const;
 
 const CAMERA_PATH_DESKTOP = createCameraPath(CAMERA_RAIL_DESKTOP);
@@ -75,10 +110,7 @@ function createCameraPath(
   };
 }
 
-function sampleRoll(
-  rail: readonly { roll: number }[],
-  progress: number,
-): number {
+function sampleRoll(rail: readonly { roll: number }[], progress: number): number {
   const maxIndex = rail.length - 1;
   const scaled = Math.max(0, Math.min(1, progress)) * maxIndex;
   const index = Math.min(maxIndex - 1, Math.floor(scaled));
@@ -128,16 +160,17 @@ class SlabViewportProfile {
       ROOM_OBJECT_SETTINGS.viewportScaleMax,
       Math.max(
         ROOM_OBJECT_SETTINGS.viewportScaleMin,
-        (this.width / ROOM_OBJECT_SETTINGS.viewportScaleDivisor) * ROOM_OBJECT_SETTINGS.viewportScaleMul
-      )
+        (this.width / ROOM_OBJECT_SETTINGS.viewportScaleDivisor) *
+          ROOM_OBJECT_SETTINGS.viewportScaleMul,
+      ),
     );
 
     return Math.min(
       ROOM_OBJECT_SETTINGS.objectScaleMax,
       Math.max(
         ROOM_OBJECT_SETTINGS.objectScaleMin,
-        slabScale * ROOM_OBJECT_SETTINGS.slabGeometryScaleBaseFactor
-      )
+        slabScale * ROOM_OBJECT_SETTINGS.slabGeometryScaleBaseFactor,
+      ),
     );
   }
 }
@@ -156,20 +189,23 @@ interface WebGLSlabProps {
   onSceneReady?: () => void;
 }
 
-export default function WebGLSlab({ coreInteractionRef, sceneStateRef, onSceneReady }: WebGLSlabProps) {
+export default function WebGLSlab({
+  coreInteractionRef,
+  sceneStateRef,
+  onSceneReady,
+}: WebGLSlabProps) {
   const invalidateRef = useRef<() => void>(() => {});
   const fossilStateRef = useRef<RecursiveFossilMaterialState>(
-    deriveRecursiveFossilMaterialState(sceneStateRef.current)
+    deriveRecursiveFossilMaterialState(sceneStateRef.current),
   );
 
   const isTouch = useRef(
     typeof window !== "undefined" &&
-    (window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
-     "ontouchstart" in window)
+      (window.matchMedia("(hover: none) and (pointer: coarse)").matches ||
+        "ontouchstart" in window),
   );
   const prefersReducedMotion = useRef(
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const isCompactViewport = typeof window === "undefined" ? false : window.innerWidth < 768;
   const cameraPos: [number, number, number] = isCompactViewport
@@ -241,8 +277,8 @@ export default function WebGLSlab({ coreInteractionRef, sceneStateRef, onSceneRe
    ───────────────────────────────────────────────────────────────── */
 
 export interface CoreInteractionState {
-  pos:    THREE.Vector2;
-  vel:    THREE.Vector2;
+  pos: THREE.Vector2;
+  vel: THREE.Vector2;
   target: THREE.Vector2;
   active: boolean;
 }
@@ -276,10 +312,7 @@ function SlabMesh({
   const cameraTargetRef = useRef(new THREE.Vector3());
   const pointerRef = useRef(new THREE.Vector2(0, 0));
   const { viewport, camera } = useThree();
-  const viewportProfile = useMemo(
-    () => new SlabViewportProfile(viewport.width),
-    [viewport.width]
-  );
+  const viewportProfile = useMemo(() => new SlabViewportProfile(viewport.width), [viewport.width]);
   const objectScale = viewportProfile.objectScale;
   const compactScale = viewportProfile.compactScale;
 
@@ -305,12 +338,12 @@ function SlabMesh({
     p.vel.set(0, 0);
 
     const parallaxScale = viewportProfile.isCompact ? 0.035 : 0.055;
-    const targetPosition = railPose.position.clone().add(
-      new THREE.Vector3(pointer.x * parallaxScale, pointer.y * parallaxScale * 0.45, 0)
-    );
-    const targetLookAt = railPose.target.clone().add(
-      new THREE.Vector3(pointer.x * 0.045, pointer.y * 0.025, 0)
-    );
+    const targetPosition = railPose.position
+      .clone()
+      .add(new THREE.Vector3(pointer.x * parallaxScale, pointer.y * parallaxScale * 0.45, 0));
+    const targetLookAt = railPose.target
+      .clone()
+      .add(new THREE.Vector3(pointer.x * 0.045, pointer.y * 0.025, 0));
 
     cameraPositionRef.current.lerp(targetPosition, 0.085);
     cameraTargetRef.current.lerp(targetLookAt, 0.095);
@@ -319,7 +352,8 @@ function SlabMesh({
     camera.rotation.z += railPose.roll;
 
     if (coreRef.current) {
-      const stageBias = Math.max(0, Math.min(1, sceneState.scrollProgress)) * (CAMERA_RAIL_DESKTOP.length - 1) - 2;
+      const stageBias =
+        Math.max(0, Math.min(1, sceneState.scrollProgress)) * (CAMERA_RAIL_DESKTOP.length - 1) - 2;
       coreRef.current.position.set(0, 0, 0);
       coreRef.current.rotation.set(
         REST_TILT_Y * 0.42 + stageBias * 0.018,
@@ -332,16 +366,9 @@ function SlabMesh({
   });
 
   return (
-    <group
-      ref={coreRef}
-      position={[0, 0, 0]}
-      scale={compactScale * objectScale}
-    >
+    <group ref={coreRef} position={[0, 0, 0]} scale={compactScale * objectScale}>
       <Suspense fallback={null}>
-        <MonolithModel
-          fossilStateRef={fossilStateRef}
-          onSceneReady={onSceneReady}
-        />
+        <MonolithModel fossilStateRef={fossilStateRef} onSceneReady={onSceneReady} />
       </Suspense>
       <ContactShadows
         position={[0, -1.08, 0]}
@@ -415,7 +442,9 @@ function MonolithModel({
 
   useFrame(({ clock }) => {
     for (const material of materialRefs.current) {
-      const uniforms = material.userData.recursiveFossilUniforms as RecursiveFossilUniforms | undefined;
+      const uniforms = material.userData.recursiveFossilUniforms as
+        | RecursiveFossilUniforms
+        | undefined;
       if (!uniforms) continue;
       updateRecursiveFossilUniforms(uniforms, fossilStateRef.current, clock.getElapsedTime());
     }
@@ -424,7 +453,9 @@ function MonolithModel({
   return <primitive object={scene} />;
 }
 
-function enhanceImportedMaterial(source: THREE.Material | THREE.Material[]): THREE.Material | THREE.Material[] {
+function enhanceImportedMaterial(
+  source: THREE.Material | THREE.Material[],
+): THREE.Material | THREE.Material[] {
   if (Array.isArray(source)) {
     return source.map((material) => enhanceImportedMaterial(material) as THREE.Material);
   }
@@ -432,14 +463,17 @@ function enhanceImportedMaterial(source: THREE.Material | THREE.Material[]): THR
   const material = source.clone();
   material.side = THREE.FrontSide;
 
-  if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
+  if (
+    material instanceof THREE.MeshStandardMaterial ||
+    material instanceof THREE.MeshPhysicalMaterial
+  ) {
     const stoneTextures = getSharedStoneTextures();
     material.map = material.map ?? stoneTextures.colorMap;
     material.bumpMap = material.bumpMap ?? stoneTextures.bumpMap;
     material.bumpScale = Math.max(material.bumpScale, 0.026);
     material.roughnessMap = material.roughnessMap ?? stoneTextures.roughnessMap;
     material.roughness = Math.max(material.roughness, 0.74);
-    material.metalness = Math.min(material.metalness, 0.10);
+    material.metalness = Math.min(material.metalness, 0.1);
     material.envMapIntensity = Math.min(material.envMapIntensity || 0.72, 0.82);
     if (material instanceof THREE.MeshPhysicalMaterial) {
       material.clearcoat = Math.min(material.clearcoat, 0.18);
@@ -483,7 +517,9 @@ function updateRecursiveFossilUniforms(
   uniforms.uFossilTime.value = time;
 }
 
-function installRecursiveFossilShader(material: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial) {
+function installRecursiveFossilShader(
+  material: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial,
+) {
   material.onBeforeCompile = (shader) => {
     const uniforms = createRecursiveFossilUniforms();
     Object.assign(shader.uniforms, uniforms);
@@ -589,9 +625,10 @@ function createStoneTextures(size: number) {
       const v = y / size;
       const fine = fbm(u * 28.0, v * 28.0, 5);
       const grain = fbm(u * 92.0 + 7.1, v * 92.0 - 3.7, 3);
-      const veinA = 1 - smoothstep(0.012, 0.070, Math.abs(fbm(u * 5.4 + 2.4, v * 7.2, 4) - 0.56));
-      const veinB = 1 - smoothstep(0.008, 0.052, Math.abs(fbm(u * 12.0 - 1.5, v * 9.0 + 5.0, 3) - 0.63));
-      const worn = Math.max(veinA * 0.50, veinB * 0.28);
+      const veinA = 1 - smoothstep(0.012, 0.07, Math.abs(fbm(u * 5.4 + 2.4, v * 7.2, 4) - 0.56));
+      const veinB =
+        1 - smoothstep(0.008, 0.052, Math.abs(fbm(u * 12.0 - 1.5, v * 9.0 + 5.0, 3) - 0.63));
+      const worn = Math.max(veinA * 0.5, veinB * 0.28);
       const shade = 0.54 + fine * 0.36 + grain * 0.14;
       const warm = worn * 0.42;
       const index = (y * size + x) * 4;

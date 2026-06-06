@@ -4,7 +4,7 @@
 
 **Reference point:** Son Daven's dark resort storytelling, architectural photography books, film noir establishing shots, Apple product-page pacing, Stripe spatial storytelling, Linear restraint, Vercel contrast, and Raycast-level interaction polish.
 
-The page should feel like a *dream valley interface* — not a hotel page, and not a copied reference, but a quiet spatial surface where stone, mist, restrained page chrome, and AI-recursive interface thinking meet.
+The page should feel like a _dream valley interface_ — not a hotel page, and not a copied reference, but a quiet spatial surface where stone, mist, restrained page chrome, and AI-recursive interface thinking meet.
 
 The interaction target is premium product-page motion: fluid, restrained, legible, and physically believable. Avoid cheap spectacle: no random flying particles, no neon cyberpunk wash, no flashing, no crowded screen, no decorative WebGL that ignores the narrative.
 
@@ -16,38 +16,38 @@ CSS-facing design tokens are defined in `app/globals.css` via Tailwind v4 `@them
 
 ### Two-Tone Signal Palette
 
-| Token | Hex | Role |
-|-------|-----|------|
-| `--color-obs-deep` | `#142334` | Deep blue page base |
-| `--color-obs-base` | `#142334` | Background mid and dark surface continuity |
-| `--color-obs-top` | `#baccd9` | Pale UI signal light |
-| `--color-obs-front` | `#142334` | Reserved for surface contrast |
-| `--color-obs-side` | `#142334` | Reserved for 3D face shading |
+| Token               | Hex       | Role                                       |
+| ------------------- | --------- | ------------------------------------------ |
+| `--color-obs-deep`  | `#142334` | Deep blue page base                        |
+| `--color-obs-base`  | `#142334` | Background mid and dark surface continuity |
+| `--color-obs-top`   | `#baccd9` | Pale UI signal light                       |
+| `--color-obs-front` | `#142334` | Reserved for surface contrast              |
+| `--color-obs-side`  | `#142334` | Reserved for 3D face shading               |
 
 ### Edge Light
 
-| Token | Value | Role |
-|-------|-------|------|
-| `--color-edge-light` | `rgba(186,204,217,0.50)` | Pale signal highlight |
+| Token                 | Value                    | Role                              |
+| --------------------- | ------------------------ | --------------------------------- |
+| `--color-edge-light`  | `rgba(186,204,217,0.50)` | Pale signal highlight             |
 | `--color-edge-signal` | `rgba(186,204,217,0.28)` | Secondary low-opacity signal edge |
-| `--color-edge-glow` | `rgba(186,204,217,0.14)` | Atmospheric halo |
+| `--color-edge-glow`   | `rgba(186,204,217,0.14)` | Atmospheric halo                  |
 
 ### Signal Washes
 
-| Token | Value | Role |
-|-------|-------|------|
-| `--color-aurora-a` | `rgba(186,204,217,0.18)` | Pale signal wash |
-| `--color-aurora-b` | `rgba(20,35,52,0.62)` | Deep blue depth wash |
-| `--color-aurora-c` | `rgba(186,204,217,0.10)` | Low signal glow |
+| Token              | Value                    | Role                 |
+| ------------------ | ------------------------ | -------------------- |
+| `--color-aurora-a` | `rgba(186,204,217,0.18)` | Pale signal wash     |
+| `--color-aurora-b` | `rgba(20,35,52,0.62)`    | Deep blue depth wash |
+| `--color-aurora-c` | `rgba(186,204,217,0.10)` | Low signal glow      |
 
 ### Text
 
-| Token | Hex | Role |
-|-------|-----|------|
-| `--color-ink` | `#baccd9` | Primary text and signal ink |
-| *(inline styles)* | `rgba(186,204,217,0.78)` | Secondary text |
-| *(inline styles)* | `rgba(186,204,217,0.68)` | Tertiary / subtitle |
-| *(inline styles)* | `rgba(186,204,217,0.40)` | Meta / decorative |
+| Token             | Hex                      | Role                        |
+| ----------------- | ------------------------ | --------------------------- |
+| `--color-ink`     | `#baccd9`                | Primary text and signal ink |
+| _(inline styles)_ | `rgba(186,204,217,0.78)` | Secondary text              |
+| _(inline styles)_ | `rgba(186,204,217,0.68)` | Tertiary / subtitle         |
+| _(inline styles)_ | `rgba(186,204,217,0.40)` | Meta / decorative           |
 
 **Constraint:** The DOM/page chrome layer is now a two-color contrast system: `#142334` and `#baccd9`. Do not recolor the WebGL monolith materials in the same pass; treat WebGL material changes as a separate design/performance decision.
 
@@ -59,14 +59,14 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 ### Scale
 
-| Element | Size | Weight | Style |
-|---------|------|--------|-------|
-| Brand | `10px` | normal | Italic, `letter-spacing: 0.38em` |
-| Kicker | `10px` | normal | Italic, `letter-spacing: 0.28em`, uppercase |
-| Narrative title | `clamp(34px, 5.2vw, 66px)` | 400 | Georgia, `letter-spacing: -0.015em` |
-| Narrative body | `15px` | normal | Italic, `letter-spacing: 0.01em` |
-| CTA | `10.5px` | normal | Uppercase, `letter-spacing: 0.24em` |
-| Meta | `9.5px` | normal | Italic, `letter-spacing: 0.26em` |
+| Element         | Size                       | Weight | Style                                       |
+| --------------- | -------------------------- | ------ | ------------------------------------------- |
+| Brand           | `10px`                     | normal | Italic, `letter-spacing: 0.38em`            |
+| Kicker          | `10px`                     | normal | Italic, `letter-spacing: 0.28em`, uppercase |
+| Narrative title | `clamp(34px, 5.2vw, 66px)` | 400    | Georgia, `letter-spacing: -0.015em`         |
+| Narrative body  | `15px`                     | normal | Italic, `letter-spacing: 0.01em`            |
+| CTA             | `10.5px`                   | normal | Uppercase, `letter-spacing: 0.24em`         |
+| Meta            | `9.5px`                    | normal | Italic, `letter-spacing: 0.26em`            |
 
 ### Constraints
 
@@ -81,14 +81,14 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 ### Visual Hierarchy (z-axis)
 
-| Layer | Element | z-index | Parallax |
-|-------|---------|---------|---------|
-| z-0 | CSS background / atmosphere | 0 | Site-owned background, no WebGL draw call |
-| z-0 | Grid or soft depth field | 0 | CSS-owned if reintroduced |
-| z-4 | Atmospheric glow | 4 | Zero |
-| z-5 | WebGL recursive monolith | 5 | Fixed object + camera rail + restrained material response |
-| z-10 | Brand / Meta | 10 | Zero |
-| z-20 | Narrative copy / CTA | 20 | Scroll stage state + CSS state transitions |
+| Layer | Element                     | z-index | Parallax                                                  |
+| ----- | --------------------------- | ------- | --------------------------------------------------------- |
+| z-0   | CSS background / atmosphere | 0       | Site-owned background, no WebGL draw call                 |
+| z-0   | Grid or soft depth field    | 0       | CSS-owned if reintroduced                                 |
+| z-4   | Atmospheric glow            | 4       | Zero                                                      |
+| z-5   | WebGL recursive monolith    | 5       | Fixed object + camera rail + restrained material response |
+| z-10  | Brand / Meta                | 10      | Zero                                                      |
+| z-20  | Narrative copy / CTA        | 20      | Scroll stage state + CSS state transitions                |
 
 ### Spatial Composition
 
@@ -112,12 +112,12 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 ### Responsive Strategy
 
-| Breakpoint | Behavior |
-|------------|---------|
-| `≤ 768px` | Stage layout recenters, title `clamp(27px,8vw,44px)`, body `13px` |
-| `≤ 400px` | Padding `18px`, title `clamp(25px,8.5vw,34px)`, body `12.5px` |
-| `landscape h≤500px` | Subtitle hidden, copy top `6vh` |
-| `hover:none + pointer:coarse` | Entrance animation disabled, DPR capped at 1 |
+| Breakpoint                    | Behavior                                                          |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `≤ 768px`                     | Stage layout recenters, title `clamp(27px,8vw,44px)`, body `13px` |
+| `≤ 400px`                     | Padding `18px`, title `clamp(25px,8.5vw,34px)`, body `12.5px`     |
+| `landscape h≤500px`           | Subtitle hidden, copy top `6vh`                                   |
+| `hover:none + pointer:coarse` | Entrance animation disabled, DPR capped at 1                      |
 
 ---
 
@@ -133,12 +133,12 @@ Font: **Georgia** (serif) — available on all macOS/iOS devices. Fallback chain
 
 ### Parallax Depth Map
 
-| Layer | Amplitude | Rationale |
-|-------|-----------|-----------|
-| Background | `0` | CSS-owned site background; WebGL canvas remains transparent |
-| Title | `tx=-0.3px, ty=-0.2px` | Counter-displacement; creates depth separation from background |
-| Eyebrow / Subtitle / CTA | `0` | Text must remain legible; any parallax hurts readability |
-| WebGL monolith | Camera rail + restrained pointer parallax | Fixed object, stage-aware camera position/look-at/roll, and low-amplitude material response |
+| Layer                    | Amplitude                                 | Rationale                                                                                   |
+| ------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Background               | `0`                                       | CSS-owned site background; WebGL canvas remains transparent                                 |
+| Title                    | `tx=-0.3px, ty=-0.2px`                    | Counter-displacement; creates depth separation from background                              |
+| Eyebrow / Subtitle / CTA | `0`                                       | Text must remain legible; any parallax hurts readability                                    |
+| WebGL monolith           | Camera rail + restrained pointer parallax | Fixed object, stage-aware camera position/look-at/roll, and low-amplitude material response |
 
 ### WebGL Interaction Model
 
@@ -162,13 +162,13 @@ Object transforms that affect visible pose must also use continuous `scrollProgr
 
 The next implementation should replace the custom rAF-driven scroll system with a clearer stack:
 
-| Layer | Library | Responsibility |
-|-------|---------|----------------|
-| Smooth input | Lenis | Wheel/touch smoothing, normalized velocity, reduced-motion fallback |
-| Timeline | GSAP ScrollTrigger | `pin`, `scrub`, section progress, stage transitions |
-| Shared state | Zustand | `scrollProgress`, `scrollVelocity`, `mouse`, `viewport`, `sceneMode` |
+| Layer           | Library               | Responsibility                                                              |
+| --------------- | --------------------- | --------------------------------------------------------------------------- |
+| Smooth input    | Lenis                 | Wheel/touch smoothing, normalized velocity, reduced-motion fallback         |
+| Timeline        | GSAP ScrollTrigger    | `pin`, `scrub`, section progress, stage transitions                         |
+| Shared state    | Zustand               | `scrollProgress`, `scrollVelocity`, `mouse`, `viewport`, `sceneMode`        |
 | WebGL rendering | Three.js / R3F / drei | Camera rail, recursive monolith geometry, shader material, background scene |
-| UI motion | Motion | Text entrance, CTA hover, layout transitions, subtle panel movement |
+| UI motion       | Motion                | Text entrance, CTA hover, layout transitions, subtle panel movement         |
 
 One library owns each responsibility. Avoid having GSAP, Motion, CSS transitions, and rAF all animate the same `transform` or `opacity` at the same time.
 
@@ -209,7 +209,7 @@ Avoid circular loop/ring motifs, torus silhouettes, through-holes, thin slabs, a
 The WebGL DOM wrapper must stay:
 
 ```tsx
-className="fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none"
+className = "fixed inset-0 z-[5] h-[100svh] w-screen overflow-hidden pointer-events-none";
 ```
 
 Do not add a CSS `transform`, `filter`, or `perspective` to this wrapper or any ancestor that should behave as viewport-fixed. Those properties can create a fixed-position containing block and make the canvas appear to move with page scroll. Use R3F object transforms for slab movement instead.

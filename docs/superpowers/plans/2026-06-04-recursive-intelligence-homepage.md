@@ -317,7 +317,7 @@ Append to `app/globals.css`:
 }
 
 .narrative-title {
-  color: #EDE9E3;
+  color: #ede9e3;
   font-family: Georgia, "Times New Roman", "SF Pro Display", "Segoe UI", Arial, serif;
   font-size: clamp(34px, 5vw, 64px);
   font-weight: 400;
@@ -419,7 +419,7 @@ Keep the top-left brand, top-right meta, and WebGL slab wrapper. Replace the cur
 The outer `<main>` should no longer be only `min-h-[100dvh]`; it should support long scroll:
 
 ```tsx
-className="relative min-h-[500svh] overflow-hidden"
+className = "relative min-h-[500svh] overflow-hidden";
 ```
 
 - [ ] **Step 5: Type-check**

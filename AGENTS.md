@@ -59,12 +59,13 @@ There is no active `VoidField3D`, `GroundPlane`, or `.hero-copy` structure in th
 **Important:** The fixed WebGL wrapper never receives scroll-driven transforms. Scroll state is passed through `sceneStateRef`, and R3F object transforms inside `WebGLSlab` move the slab.
 
 **Physics state shape:**
+
 ```typescript
 interface PhysicsState {
-  pos: THREE.Vector2;    // current rotation (written by SlabMesh.useFrame)
-  vel: THREE.Vector2;     // velocity (written by SlabMesh.useFrame)
-  target: THREE.Vector2;  // mouse target (written by Hero.tsx RAF loop)
-  active: boolean;        // is pointer on page? (set by onMove/onLeave)
+  pos: THREE.Vector2; // current rotation (written by SlabMesh.useFrame)
+  vel: THREE.Vector2; // velocity (written by SlabMesh.useFrame)
+  target: THREE.Vector2; // mouse target (written by Hero.tsx RAF loop)
+  active: boolean; // is pointer on page? (set by onMove/onLeave)
 }
 ```
 
@@ -119,8 +120,8 @@ When pointer leaves:
 
 ```css
 @theme {
-  --color-obs-deep: #0A0C12;
-  --color-ink: #EDE9E3;
+  --color-obs-deep: #0a0c12;
+  --color-ink: #ede9e3;
   /* etc. */
 }
 ```
@@ -133,15 +134,15 @@ Usage in JSX: `className="bg-[#0A0C12]"` or reference as CSS vars — custom the
 
 ## Mobile performance strategy
 
-| Concern | Solution |
-|---------|---------|
-| DPR | Cap at `[1, 1]` (disable Retina scaling) |
-| MSAA | Disable `antialias` on mobile |
-| Particles | 55 → 28 |
-| Touch parallax | Amplitude halved; title parallax disabled |
-| Entrance animation | Skipped on touch (content is immediately readable) |
-| Tab visibility | R3F `frameloop` could switch to `"demand"` + `visibilitychange` listener to skip frames when hidden (TODO — currently `"always"`) |
-| Canvas scale | `transform: scale(0.85)` on mobile (smaller viewport, same slab size) |
+| Concern            | Solution                                                                                                                          |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| DPR                | Cap at `[1, 1]` (disable Retina scaling)                                                                                          |
+| MSAA               | Disable `antialias` on mobile                                                                                                     |
+| Particles          | 55 → 28                                                                                                                           |
+| Touch parallax     | Amplitude halved; title parallax disabled                                                                                         |
+| Entrance animation | Skipped on touch (content is immediately readable)                                                                                |
+| Tab visibility     | R3F `frameloop` could switch to `"demand"` + `visibilitychange` listener to skip frames when hidden (TODO — currently `"always"`) |
+| Canvas scale       | `transform: scale(0.85)` on mobile (smaller viewport, same slab size)                                                             |
 
 ---
 
@@ -159,6 +160,7 @@ Usage in JSX: `className="bg-[#0A0C12]"` or reference as CSS vars — custom the
 ## Common operations
 
 ### Run dev server
+
 ```bash
 cd /Users/ai/projects/static-25d-hero
 npm run dev
@@ -166,17 +168,20 @@ npm run dev
 ```
 
 ### Build
+
 ```bash
 npm run build
 # → ./out/ (static SSG output)
 ```
 
 ### Check TypeScript
+
 ```bash
 npx tsc --noEmit
 ```
 
 ### Restart dev server (if port 3000 is taken)
+
 ```bash
 # Kill existing
 kill $(lsof -ti:3000)
@@ -189,6 +194,7 @@ lsof -i:3000
 ## Reading the codebase
 
 Start here:
+
 1. `app/layout.tsx` — root, imports globals.css
 2. `app/page.tsx` — single line, renders `<Hero />`
 3. `app/globals.css` — design tokens, CTA, grid overlay, responsive breakpoints

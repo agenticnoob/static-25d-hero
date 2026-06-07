@@ -31,8 +31,8 @@ TypeScript 5.9.3 (strict)
 
 The page is a single `Hero` component rendering:
 
-1. **Background layer** — `BgQuad` inside Three.js Canvas (NDC fullscreen quad), shader: deep-space gradient + 64px grid + atmospheric glow. Fixed in screen space.
-2. **WebGL slab** — `WebGLSlab.tsx` (R3F Canvas), with `SlabMesh` (3D box) as the single focal object.
+1. **CSS page ground** — `app/globals.css` owns the `#142334` + `#baccd9` page chrome and soft reveal styles.
+2. **WebGL monolith** — `WebGLSlab.tsx` (transparent R3F Canvas), with `SlabMesh` as the legacy component name for the single GLB recursive fossil monolith.
 3. **Narrative copy** — HTML/CSS sections from `NarrativeSection.tsx`, `z-20`, five Chinese stages.
 
 All WebGL content lives in a single Three.js Canvas. The DOM only contains the editorial copy.
@@ -45,24 +45,24 @@ There is no active `VoidField3D`, `GroundPlane`, or `.hero-copy` structure in th
 
 ### `Hero.tsx`
 
-- Owns `slabPhysRef` (a mutable ref object containing `{ pos, vel, target, active }`)
-- Passes `slabPhysRef` to `WebGLSlab` as a prop
+- Owns `coreInteractionRef` (a mutable ref object containing `{ pos, vel, target, active }`)
+- Passes `coreInteractionRef` to `WebGLSlab` as a prop
 - **Single unified rAF loop** (NOT multiple `useEffect`) that:
   1. Reads `mouseRef` (from `pointermove` / `touchmove`) → lerps to `currentRef`
-  2. Writes to `slabPhysRef.current.target` — this drives WebGL mesh rotation
+  2. Writes to `coreInteractionRef.current.target` — this drives restrained WebGL pointer parallax
   3. Writes `titleRef.style.transform` — title counter-parallax
   4. Writes narrative section `data-active` and inline presence styles
   5. Writes `sceneStateRef` — scroll-driven WebGL stage state
 
-**Critical architecture decision:** `slabPhysRef` is owned by `Hero.tsx`. Hero.tsx RAF loop writes `target` every frame from `currentRef` (window-level pointer tracking, no blind spot). Physics computation (spring-damper on `pos`) lives entirely in `SlabMesh.useFrame` — NOT in Hero.tsx. This eliminates the double-write bug where both Hero.tsx and SlabMesh were independently updating `p.pos` in the same frame with different spring constants.
+**Critical architecture decision:** `coreInteractionRef` is owned by `Hero.tsx`. Hero.tsx RAF loop writes `target` every frame from `currentRef` (window-level pointer tracking, no blind spot). Pointer smoothing lives inside `SlabMesh.useFrame` — NOT in Hero.tsx. Do not add a second writer for `pos` / `vel`.
 
-**Important:** The fixed WebGL wrapper never receives scroll-driven transforms. Scroll state is passed through `sceneStateRef`, and R3F object transforms inside `WebGLSlab` move the slab.
+**Important:** The fixed WebGL wrapper never receives scroll-driven transforms. Scroll state is passed through `sceneStateRef`; R3F camera/object transforms inside `WebGLSlab` tell the story.
 
 **Physics state shape:**
 
 ```typescript
-interface PhysicsState {
-  pos: THREE.Vector2; // current rotation (written by SlabMesh.useFrame)
+interface CoreInteractionState {
+  pos: THREE.Vector2; // current pointer state (written by SlabMesh.useFrame)
   vel: THREE.Vector2; // velocity (written by SlabMesh.useFrame)
   target: THREE.Vector2; // mouse target (written by Hero.tsx RAF loop)
   active: boolean; // is pointer on page? (set by onMove/onLeave)
@@ -72,44 +72,37 @@ interface PhysicsState {
 ### `WebGLSlab.tsx`
 
 - R3F `Canvas` with transparent background
-- **`slabPhysRef` is received as a prop** from `Hero.tsx` — not created internally
+- **`coreInteractionRef` is received as a prop** from `Hero.tsx` — not created internally
 - **`sceneStateRef` is received as a prop** from `Hero.tsx` — this is the damped WebGL render state, not the raw source interaction state.
-- **`BgQuad`** component: NDC fullscreen quad (ignores camera). Renders the deep-space gradient + 64px grid + atmospheric glow in a fragment shader. `renderOrder={-1000}`, `depthTest=false`, `frustumCulled=false`.
-- `SlabMesh` component inside Canvas: reads `slabPhysRef` via `useFrame`, runs ALL spring-damper physics on `pos`/`vel`, drives mesh rotation
+- `SlabMesh` component inside Canvas: reads `coreInteractionRef` via `useFrame`, smooths pointer state, applies camera parallax and monolith posture
 - `SlabMesh` also reads `sceneStateRef` for stage pose, scroll velocity, and shader uniforms
-- **Physics lives inside `useFrame` ONLY** — Hero.tsx does not write `pos`/`vel`
-- `physRef` is typed as `React.MutableRefObject<PhysicsState>`
+- `src/lib/cameraMotion.ts` owns `sampleNarrativeCameraPose()`, the pure orbit/dolly/target-drift camera sampling function
+- **Pointer smoothing lives inside `useFrame` ONLY** — Hero.tsx does not write `pos`/`vel`
+- `coreInteractionRef` is typed as `React.MutableRefObject<CoreInteractionState>`
 
-**Important:** `useFrame` can only be called inside `<Canvas>`. Since `slabPhysRef` is a ref (mutable object), writes from outside Canvas are visible inside `useFrame` immediately.
+**Important:** `useFrame` can only be called inside `<Canvas>`. Since `coreInteractionRef` is a ref (mutable object), writes from outside Canvas are visible inside `useFrame` immediately.
 
 ### `globals.css`
 
 - Tailwind v4 `@theme` block for all design tokens
 - Narrative section layout classes, CTA styles, keyframes defined here
-- Note: background grid/gradient/glow are now in WebGLSlab BgQuad shader, not CSS
+- `.webgl-shell` owns the soft scene reveal: slight blur/dim/scale fades into the final camera view after fonts + GLB readiness.
 
 ---
 
-## Parallax physics model
+## Pointer and camera model
 
 ```
-Inertia (spring-damper):
-  vel = vel * damping + (target - pos) * spring
+Pointer smoothing:
+  pointer += (target - pointer) * 0.075
 
-  damping = 0.82  → each frame, velocity retains 82% of previous
-  spring  = 0.045 → how aggressively it chases the target
-  settle  = 0.007 → spring constant when pointer leaves (slower)
+REST_TILT_Y = 0.18 → the monolith's rest pitch
 
-Gravity:
-  vel.y += 0.004  → applied only when !active (drifting)
+Camera narrative:
+  sampleNarrativeCameraPose(scrollProgress, isCompact)
+  → position + target + roll
 
-REST_TILT_Y = 0.18 → the slab's rest pitch (slight tilt toward viewer)
-
-When pointer leaves:
-  1. target → (0, REST_TILT_Y)
-  2. Spring pulls pos toward target, damped
-  3. Gravity adds a constant downward component to vel.y
-  4. Slab drifts down slightly, then settles at REST_TILT_Y
+The camera path combines orbit angle, dolly distance, height, look-at drift, and roll.
 ```
 
 **DO NOT** add mass/inertia models from physics libraries (Rapier, Cannon, etc.) unless explicitly requested. The current model is intentionally simple.
@@ -142,7 +135,7 @@ Usage in JSX: `className="bg-[#0A0C12]"` or reference as CSS vars — custom the
 | Touch parallax     | Amplitude halved; title parallax disabled                                                                                         |
 | Entrance animation | Skipped on touch (content is immediately readable)                                                                                |
 | Tab visibility     | R3F `frameloop` could switch to `"demand"` + `visibilitychange` listener to skip frames when hidden (TODO — currently `"always"`) |
-| Canvas scale       | `transform: scale(0.85)` on mobile (smaller viewport, same slab size)                                                             |
+| Canvas reveal      | skipped on touch via `.webgl-shell` override                                                                                      |
 
 ---
 
@@ -151,7 +144,7 @@ Usage in JSX: `className="bg-[#0A0C12]"` or reference as CSS vars — custom the
 - **No source code modifications** to Hermes/UHF unless explicitly requested — prefer外围配置, wrappers, 调用方式
 - **No bounce/overshoot animations** — ease-out-only, `cubic-bezier(0.28, 0.72, 0.18, 1)`
 - **No React event handlers on the CTA** — pure CSS hover only
-- **No competing focal objects** — the WebGL slab is the one and only
+- **No competing focal objects** — the WebGL monolith is the one and only
 - **Don't change the palette** without consulting — obsidian + warm off-white is the identity
 - **Don't use Inter/Roboto/system-ui** for any text
 

@@ -68,6 +68,25 @@ html[data-scene-ready="false"] body {
   display: block;
 }
 
+/* ── Scene reveal handoff ───────────────────────────────── */
+.webgl-shell {
+  opacity: 0;
+  filter: blur(10px) brightness(0.72);
+  transform: scale(1.035) translate3d(0, 10px, 0);
+  transform-origin: 50% 50%;
+  transition:
+    opacity 1.25s var(--ease-quiet) 80ms,
+    filter 1.25s var(--ease-quiet) 80ms,
+    transform 1.25s var(--ease-quiet) 80ms;
+  will-change: opacity, filter, transform;
+}
+
+main[data-ready="true"] .webgl-shell {
+  opacity: 1;
+  filter: blur(0) brightness(1);
+  transform: scale(1) translate3d(0, 0, 0);
+}
+
 /* ── Scene readiness gate ───────────────────────────────── */
 .scene-preloader {
   position: fixed;
@@ -99,6 +118,12 @@ main[data-ready="false"] .narrative-section {
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
+}
+
+main[data-intro="revealing"] .brand,
+main[data-intro="revealing"] .meta,
+main[data-intro="revealing"] .narrative-section {
+  pointer-events: none;
 }
 
 .scene-preloader__mark {
@@ -499,8 +524,15 @@ main[data-ready="false"] .narrative-section {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scene-preloader {
+  .scene-preloader,
+  .webgl-shell {
     transition: none;
+  }
+
+  .webgl-shell {
+    opacity: 1;
+    filter: none;
+    transform: none;
   }
 }
 
@@ -516,6 +548,13 @@ main[data-ready="false"] .narrative-section {
     opacity: 1 !important;
     transform: translateY(0) !important;
     transition: none !important;
+  }
+
+  .webgl-shell {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    transition: none;
   }
 
   /* Reduce DPR to save battery on mobile */

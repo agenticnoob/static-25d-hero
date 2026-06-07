@@ -9,6 +9,7 @@ import {
   type RecursiveFossilMaterialState,
   type SceneState,
 } from "@/lib/interaction";
+import { sampleNarrativeCameraPose } from "@/lib/cameraMotion";
 import { MONOLITH_MODEL_PATH } from "@/lib/modelAssets";
 
 /* ─────────────────────────────────────────────────────────────────
@@ -26,112 +27,6 @@ const CAMERA_SETTINGS = {
   near: 0.1,
   far: 60,
 };
-
-const CAMERA_RAIL_DESKTOP = [
-  {
-    position: new THREE.Vector3(1.68, 1.44, 3.25),
-    target: new THREE.Vector3(0.0, 0.02, 0.0),
-    roll: 0.0,
-  },
-  {
-    position: new THREE.Vector3(2.12, 1.18, 2.72),
-    target: new THREE.Vector3(0.18, 0.0, -0.04),
-    roll: -0.025,
-  },
-  {
-    position: new THREE.Vector3(0.78, 0.92, 2.02),
-    target: new THREE.Vector3(0.08, -0.02, 0.0),
-    roll: 0.035,
-  },
-  {
-    position: new THREE.Vector3(-0.52, 0.62, 1.76),
-    target: new THREE.Vector3(-0.1, -0.04, 0.03),
-    roll: -0.018,
-  },
-  {
-    position: new THREE.Vector3(1.28, 1.22, 2.96),
-    target: new THREE.Vector3(0.0, 0.01, 0.0),
-    roll: 0.0,
-  },
-] as const;
-
-const CAMERA_RAIL_COMPACT = [
-  {
-    position: new THREE.Vector3(1.05, 1.08, 2.42),
-    target: new THREE.Vector3(0.0, 0.02, 0.0),
-    roll: 0.0,
-  },
-  {
-    position: new THREE.Vector3(1.38, 0.98, 2.18),
-    target: new THREE.Vector3(0.1, 0.0, -0.03),
-    roll: -0.018,
-  },
-  {
-    position: new THREE.Vector3(0.42, 0.84, 1.88),
-    target: new THREE.Vector3(0.05, -0.03, 0.0),
-    roll: 0.02,
-  },
-  {
-    position: new THREE.Vector3(-0.36, 0.7, 1.82),
-    target: new THREE.Vector3(-0.08, -0.04, 0.02),
-    roll: -0.012,
-  },
-  {
-    position: new THREE.Vector3(0.92, 1.0, 2.34),
-    target: new THREE.Vector3(0.0, 0.01, 0.0),
-    roll: 0.0,
-  },
-] as const;
-
-const CAMERA_PATH_DESKTOP = createCameraPath(CAMERA_RAIL_DESKTOP);
-const CAMERA_PATH_COMPACT = createCameraPath(CAMERA_RAIL_COMPACT);
-
-function smootherstep01(value: number): number {
-  const t = Math.max(0, Math.min(1, value));
-  return t * t * t * (t * (t * 6 - 15) + 10);
-}
-
-function createCameraPath(
-  rail: readonly { position: THREE.Vector3; target: THREE.Vector3; roll: number }[],
-) {
-  return {
-    position: new THREE.CatmullRomCurve3(
-      rail.map((point) => point.position),
-      false,
-      "centripetal",
-      0.5,
-    ),
-    target: new THREE.CatmullRomCurve3(
-      rail.map((point) => point.target),
-      false,
-      "centripetal",
-      0.5,
-    ),
-  };
-}
-
-function sampleRoll(rail: readonly { roll: number }[], progress: number): number {
-  const maxIndex = rail.length - 1;
-  const scaled = Math.max(0, Math.min(1, progress)) * maxIndex;
-  const index = Math.min(maxIndex - 1, Math.floor(scaled));
-  const local = smootherstep01(scaled - index);
-  return THREE.MathUtils.lerp(rail[index].roll, rail[index + 1].roll, local);
-}
-
-function sampleCameraRail(
-  sceneState: SceneState,
-  isCompact: boolean,
-): { position: THREE.Vector3; target: THREE.Vector3; roll: number } {
-  const rail = isCompact ? CAMERA_RAIL_COMPACT : CAMERA_RAIL_DESKTOP;
-  const path = isCompact ? CAMERA_PATH_COMPACT : CAMERA_PATH_DESKTOP;
-  const progress = Math.max(0, Math.min(1, sceneState.scrollProgress));
-
-  return {
-    position: path.position.getPointAt(progress),
-    target: path.target.getPointAt(progress),
-    roll: sampleRoll(rail, progress),
-  };
-}
 
 const ROOM_OBJECT_SETTINGS = {
   slabGeometryScaleBaseFactor: 1.05,
@@ -310,6 +205,8 @@ function SlabMesh({
   const coreRef = useRef<THREE.Group>(null);
   const cameraPositionRef = useRef(new THREE.Vector3());
   const cameraTargetRef = useRef(new THREE.Vector3());
+  const targetPositionRef = useRef(new THREE.Vector3());
+  const targetLookAtRef = useRef(new THREE.Vector3());
   const pointerRef = useRef(new THREE.Vector2(0, 0));
   const { viewport, camera } = useThree();
   const viewportProfile = useMemo(() => new SlabViewportProfile(viewport.width), [viewport.width]);
@@ -322,10 +219,18 @@ function SlabMesh({
     fossilStateRef.current = deriveRecursiveFossilMaterialState(sceneState, {
       reducedMotion: prefersReducedMotion,
     });
-    const railPose = sampleCameraRail(sceneState, viewportProfile.isCompact);
+    const railPose = sampleNarrativeCameraPose(
+      sceneState.scrollProgress,
+      viewportProfile.isCompact,
+    );
+    const targetPosition = targetPositionRef.current;
+    const targetLookAt = targetLookAtRef.current;
+    targetPosition.set(railPose.position[0], railPose.position[1], railPose.position[2]);
+    targetLookAt.set(railPose.target[0], railPose.target[1], railPose.target[2]);
+
     if (cameraPositionRef.current.lengthSq() === 0) {
-      cameraPositionRef.current.copy(railPose.position);
-      cameraTargetRef.current.copy(railPose.target);
+      cameraPositionRef.current.copy(targetPosition);
+      cameraTargetRef.current.copy(targetLookAt);
     }
     const pointer = pointerRef.current;
     const pointerEase = prefersReducedMotion ? 1 : 0.075;
@@ -338,12 +243,10 @@ function SlabMesh({
     p.vel.set(0, 0);
 
     const parallaxScale = viewportProfile.isCompact ? 0.035 : 0.055;
-    const targetPosition = railPose.position
-      .clone()
-      .add(new THREE.Vector3(pointer.x * parallaxScale, pointer.y * parallaxScale * 0.45, 0));
-    const targetLookAt = railPose.target
-      .clone()
-      .add(new THREE.Vector3(pointer.x * 0.045, pointer.y * 0.025, 0));
+    targetPosition.x += pointer.x * parallaxScale;
+    targetPosition.y += pointer.y * parallaxScale * 0.45;
+    targetLookAt.x += pointer.x * 0.045;
+    targetLookAt.y += pointer.y * 0.025;
 
     cameraPositionRef.current.lerp(targetPosition, 0.085);
     cameraTargetRef.current.lerp(targetLookAt, 0.095);
@@ -352,8 +255,7 @@ function SlabMesh({
     camera.rotation.z += railPose.roll;
 
     if (coreRef.current) {
-      const stageBias =
-        Math.max(0, Math.min(1, sceneState.scrollProgress)) * (CAMERA_RAIL_DESKTOP.length - 1) - 2;
+      const stageBias = Math.max(0, Math.min(1, sceneState.scrollProgress)) * 4 - 2;
       coreRef.current.position.set(0, 0, 0);
       coreRef.current.rotation.set(
         REST_TILT_Y * 0.42 + stageBias * 0.018,

@@ -56,7 +56,7 @@ The implementation currently uses one interaction stack in `Hero.tsx` + `WebGLSl
 | `motion`                 | Implemented | Narrative section presence primitives                               |
 | `zustand`                | Implemented | Shared pointer, viewport, and scene-mode state                      |
 
-Current code still keeps the per-frame DOM/pointer writes in a custom rAF loop so one owner coordinates copy presence, title counter-parallax, and WebGL state. The WebGL object is fixed in world space; scroll moves the camera rail and material response rather than a physics room.
+Current code still keeps the per-frame DOM/pointer writes in a custom rAF loop so one owner coordinates copy presence, title counter-parallax, and WebGL state. The WebGL object is fixed in world space; scroll moves the camera orbit/dolly path and material response rather than a physics room.
 
 `InteractionState` in `src/lib/interaction.ts` describes the future shared source state shape. `SceneState` is the current WebGL render state passed from `Hero.tsx` to `WebGLSlab.tsx`; it stores damped scroll progress, stage index, eased stage progress, and scroll velocity. `deriveRecursiveFossilMaterialState` maps that render state into material parameters for the GLB monolith.
 
@@ -79,7 +79,7 @@ npm run start      # Serve the built output
 
 The page is a `500svh` long-scroll surface. The WebGL canvas stays fixed at `100svh`; raw scrolling drives narrative section presence, while a damped visual scroll value updates a mutable `sceneStateRef` for the R3F object. This avoids creating a fixed-position containing block bug where the canvas itself appears to fall during scroll, and keeps the WebGL narrative from feeling locked to the scrollbar.
 
-There is one WebGL focal object: a GLB recursive monolith loaded from `public/models/black-layered-prism.optimized.glb`. It is intentionally not a thin slab, ring, through-hole, physics body, or room-bound object. Its camera pose and material response are stage-aware. The current direction is **Dream Valley Interface / Recursive Fossil**: a dark interface artifact whose surface appears compressed, engraved, mirrored, and stabilized by scroll. The page chrome and narrative layer use the `#142334` + `#baccd9` two-tone contrast system; the WebGL monolith keeps its existing fossil material palette unless a separate WebGL material pass is approved.
+There is one WebGL focal object: a GLB recursive monolith loaded from `public/models/black-layered-prism.optimized.glb`. It is intentionally not a thin slab, ring, through-hole, physics body, or room-bound object. Its camera pose and material response are stage-aware. The camera now combines orbit, dolly distance, height, look-at drift, and roll through `src/lib/cameraMotion.ts`, so scrolling feels like moving around and toward the artifact rather than sliding along a flat rail. The current direction is **Dream Valley Interface / Recursive Fossil**: a dark interface artifact whose surface appears compressed, engraved, mirrored, and stabilized by scroll. The page chrome and narrative layer use the `#142334` + `#baccd9` two-tone contrast system; the WebGL monolith keeps its existing fossil material palette unless a separate WebGL material pass is approved.
 
 | Stage | HTML narrative  | WebGL expression                                        |
 | ----- | --------------- | ------------------------------------------------------- |
@@ -89,7 +89,7 @@ There is one WebGL focal object: a GLB recursive monolith loaded from `public/mo
 | 自指  | 中央收束        | Mirror-like traces and self-reference bands intensify   |
 | 重构  | 下左收束        | Compression recedes; signal stabilizes into an artifact |
 
-The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, mapped narrative sections, and a short scene-ready preloader. The site background is CSS-owned by `app/globals.css`; `WebGLSlab.tsx` renders a transparent R3F scene with the recursive monolith object (`SlabMesh`, despite the legacy component name).
+The page keeps the DOM simple: brand/meta, fixed WebGL wrapper, mapped narrative sections, and a short scene-ready preloader. Once fonts and the GLB mount are ready, the preloader fades while the WebGL shell eases from slight blur/dim/scale into the final scene; copy entrance is delayed so the transition is a handoff instead of a hard cut. The site background is CSS-owned by `app/globals.css`; `WebGLSlab.tsx` renders a transparent R3F scene with the recursive monolith object (`SlabMesh`, despite the legacy component name).
 
 ---
 
@@ -131,12 +131,13 @@ See `AGENTS.md` for:
 | Two-tone page chrome palette | `app/globals.css` → `@theme` block                                                                         |
 | Narrative stage layout       | `app/globals.css` → `.narrative-section--*`                                                                |
 | Scroll stage model           | `src/lib/interaction.ts`                                                                                   |
-| WebGL camera rail            | `src/components/WebGLSlab.tsx` → `CAMERA_RAIL_*`                                                           |
+| WebGL camera path            | `src/lib/cameraMotion.ts` → `sampleNarrativeCameraPose()`                                                  |
 | Recursive monolith model     | `public/models/black-layered-prism.optimized.glb`                                                          |
 | Model generation scripts     | `scripts/generate-monolith.mjs`, `scripts/generate-monolith.blender.py`, `scripts/run-blender-monolith.sh` |
 | Recursive fossil state       | `src/lib/interaction.ts` → `deriveRecursiveFossilMaterialState`                                            |
 | Material effects             | `src/components/WebGLSlab.tsx` → `installRecursiveFossilShader` / `onBeforeCompile` uniforms               |
 | Scene ready gate             | `src/components/Hero.tsx` + `WebGLSlab.tsx` `onSceneReady`                                                 |
+| Intro reveal timing          | `src/lib/introReveal.ts`                                                                                   |
 
 ## Documentation status
 

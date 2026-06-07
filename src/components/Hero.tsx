@@ -7,6 +7,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "@studio-freight/lenis";
 import { homepageSections } from "@/content/homepage";
 import { getCinematicScrollStage, getStageIndex } from "@/lib/interaction";
+import { INTRO_REVEAL } from "@/lib/introReveal";
+import { getNarrativePresence } from "@/lib/narrativePresence";
 import { useHeroStore } from "@/lib/heroStore";
 import WebGLSlab from "./WebGLSlab";
 import NarrativeSection from "./NarrativeSection";
@@ -50,24 +52,12 @@ const CORE_REST_Y = 0.18;
 const TICK_EASE = 0.055;
 const SCROLL_VELOCITY_RESPONSE = 0.22;
 
-const WARP_STAGE = {
-  enter: 0.02,
-  start: 0.2,
-  exit: 0.76,
-  vanish: 0.96,
-};
-
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
-}
-
-function smoothstep(edge0: number, edge1: number, value: number) {
-  const x = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
-  return x * x * (3 - 2 * x);
 }
 
 function scheduleFrame(callback: FrameRequestCallback): number {
@@ -104,6 +94,7 @@ export default function Hero() {
   const sectionsRef = useRef<HTMLElement[]>([]);
   const [sceneReady, setSceneReady] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
+  const [introVisible, setIntroVisible] = useState(true);
 
   const coreInteractionRef = useRef<{
     pos: THREE.Vector2;
@@ -192,6 +183,21 @@ export default function Hero() {
     };
   }, [isReady]);
 
+  useEffect(() => {
+    if (!isReady) {
+      setIntroVisible(true);
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setIntroVisible(false);
+    }, INTRO_REVEAL.preloaderFadeMs);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isReady]);
+
   /* ── Entrance animation ──────────────────────────────── */
   const hasRun = useRef(false);
   useEffect(() => {
@@ -219,7 +225,7 @@ export default function Hero() {
     ENTRANCE_ELEMENTS.forEach((selector) => {
       const el = document.querySelector(selector) as HTMLElement | null;
       if (!el) return;
-      const delay = ENTRANCE_DELAYS[selector] ?? 0;
+      const delay = (ENTRANCE_DELAYS[selector] ?? 0) + INTRO_REVEAL.copyDelayMs / 1000;
       el.style.opacity = "0";
       el.style.transform = "translateY(20px)";
       el.style.transition = `opacity ${TRANSITION_DURATION} ${EASE_QUIET}, transform ${TRANSITION_DURATION} ${EASE_QUIET}`;
@@ -304,16 +310,17 @@ export default function Hero() {
       window.addEventListener("blur", onPointerLeave);
     }
 
-    const updatePresence = () => {
+    const updatePresence = (scrollY: number) => {
       const viewportH = Math.max(window.innerHeight, 1);
-      sectionsRef.current.forEach((section) => {
+      sectionsRef.current.forEach((section, index) => {
         const rect = section.getBoundingClientRect();
-        const travel = Math.max(rect.height + viewportH, 1);
-        const sectionProgress = clamp((viewportH - rect.top) / travel, 0, 1);
-        const enter = smoothstep(WARP_STAGE.enter, WARP_STAGE.start, sectionProgress);
-        const exit = 1 - smoothstep(WARP_STAGE.exit, WARP_STAGE.vanish, sectionProgress);
-        const presence = enter * exit;
-        const direction = sectionProgress < 0.5 ? 1 : -1;
+        const { presence, direction, offsetY } = getNarrativePresence({
+          index,
+          sectionTop: rect.top,
+          sectionHeight: rect.height,
+          viewportHeight: viewportH,
+          scrollY,
+        });
         const inner = section.querySelector<HTMLElement>(".narrative-section-inner");
 
         section.dataset.active = presence >= 0.18 ? "true" : "false";
@@ -321,9 +328,10 @@ export default function Hero() {
         if (inner) {
           const quiet = 1 - presence;
           const scale = 0.992 + presence * 0.008;
+          const translateY = offsetY ?? quiet * 18 * direction;
           inner.style.opacity = presence > 0.06 ? `${0.12 + presence * 0.88}` : "0";
           inner.style.filter = `blur(${(quiet * 1.35).toFixed(2)}px)`;
-          inner.style.transform = `translate3d(0, ${(quiet * 18 * direction).toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
+          inner.style.transform = `translate3d(0, ${translateY.toFixed(2)}px, 0) scale(${scale.toFixed(3)})`;
         }
       });
     };
@@ -418,7 +426,7 @@ export default function Hero() {
 
       syncSceneState(raw, prefersReduced ? 0 : velocity);
       setPointerCurrent(currentRef.current);
-      updatePresence();
+      updatePresence(latestScroll);
       ScrollTrigger.update();
     };
 
@@ -460,7 +468,7 @@ export default function Hero() {
           SCROLL_VELOCITY_LIMIT,
         );
         syncSceneState(self.progress, prefersReduced ? 0 : velocity);
-        updatePresence();
+        updatePresence(latestScroll);
       },
     });
 
@@ -527,6 +535,7 @@ export default function Hero() {
       id="hero"
       aria-label="Recursive intelligence homepage"
       data-ready={isReady ? "true" : "false"}
+      data-intro={isReady ? (introVisible ? "revealing" : "settled") : "loading"}
       className="relative min-h-[500svh]"
       style={{ isolation: "isolate", overflowX: "clip", overflowY: "visible" }}
     >
@@ -594,7 +603,7 @@ export default function Hero() {
         <span>recursive interface</span>
       </div>
 
-      <div className="fixed inset-0 z-[5] h-[100svh] w-full overflow-hidden pointer-events-none">
+      <div className="webgl-shell fixed inset-0 z-[5] h-[100svh] w-full overflow-hidden pointer-events-none">
         <WebGLSlab
           coreInteractionRef={coreInteractionRef}
           sceneStateRef={sceneStateRef}
@@ -631,8 +640,12 @@ export default function Hero() {
         </p>
       </noscript>
 
-      {!isReady && (
-        <div className="scene-preloader" aria-hidden="false" data-ready="false">
+      {introVisible && (
+        <div
+          className="scene-preloader"
+          aria-hidden="false"
+          data-ready={isReady ? "true" : "false"}
+        >
           <div className="scene-preloader__mark" />
           <div className="scene-preloader__text">dream valley interface</div>
         </div>

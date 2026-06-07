@@ -21,7 +21,7 @@
 - WebGL runtime 已移除 Rapier/room/physics/collision 方向。
 - `@react-three/rapier` 已从依赖中移除。
 - 主体改成厚重 recursive monolith：厚碑体、front inset panels、ridge panels、engraved recursive paths。
-- 滚动叙事改由 camera rail、pointer parallax 和材质响应表达。
+- 滚动叙事改由 orbit/dolly camera path、pointer parallax 和材质响应表达。
 - shader 中会被读成圆环的 loop/ring 纹理已移除。
 - 可见文案已去掉旧 `slab` 称呼。
 - README、PRODUCT、DESIGN、HANDOFF 和本文件已同步到当前架构。

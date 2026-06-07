@@ -7,7 +7,7 @@
 - Remote: `origin/main`
 - Current visual direction: fixed recursive stela object, camera-driven WebGL narrative, no physics room.
 
-The page is a single long-scroll spatial homepage. It uses a fixed full-viewport WebGL canvas and scroll-driven narrative sections. The canvas wrapper must remain fixed to the viewport; scroll movement is expressed inside the R3F scene through camera rail state and material response, not by moving the canvas DOM wrapper.
+The page is a single long-scroll spatial homepage. It uses a fixed full-viewport WebGL canvas and scroll-driven narrative sections. The canvas wrapper must remain fixed to the viewport; scroll movement is expressed inside the R3F scene through orbit/dolly camera state and material response, not by moving the canvas DOM wrapper.
 
 ## Current WebGL Direction
 
@@ -17,7 +17,7 @@ The active WebGL scene contains one focal object:
 - dark obsidian / graphite material;
 - no through-hole, torus, ring, rigid body, collision room, or gravity;
 - front-surface inset panels and shallow engraved recursive paths;
-- a stage-aware camera rail that tells the narrative by changing viewpoint.
+- a stage-aware orbit/dolly camera path that tells the narrative by changing viewpoint and distance.
 
 The goal is to make the object read first as a believable physical artifact. Philosophy, AI, recursion, and self-reference should appear as secondary structure: depth, engraving, repeated insets, and camera reveal.
 
@@ -42,7 +42,7 @@ The file name `WebGLSlab.tsx` and component name `SlabMesh` are legacy names. Th
 
 ### 3. Camera Narrative
 
-The WebGL story is now told through `CAMERA_RAIL_DESKTOP` and `CAMERA_RAIL_COMPACT`.
+The WebGL story is now told through `src/lib/cameraMotion.ts` and `sampleNarrativeCameraPose()`.
 
 `Hero.tsx` still owns the unified rAF loop and writes:
 
@@ -53,8 +53,9 @@ The WebGL story is now told through `CAMERA_RAIL_DESKTOP` and `CAMERA_RAIL_COMPA
 `WebGLSlab.tsx` reads those refs in R3F `useFrame` and applies:
 
 - stage-aware camera position/look-at/roll;
+- orbit and dolly changes around the fixed monolith;
 - tiny pointer parallax;
-- restrained material response through `uMouse`, `uInertia`, and `uImpact`.
+- restrained material response through recursive fossil uniforms.
 
 ### 4. Documentation Sync
 
@@ -67,7 +68,8 @@ The WebGL story is now told through `CAMERA_RAIL_DESKTOP` and `CAMERA_RAIL_COMPA
 - `app/globals.css` - Tailwind v4 theme tokens, narrative layout CSS, responsive rules
 - `src/components/Hero.tsx` - long-scroll controller, section activation, pointer/scroll state
 - `src/components/NarrativeSection.tsx` - stage-aware narrative DOM section
-- `src/components/WebGLSlab.tsx` - R3F canvas, fixed background, recursive stela, camera rail
+- `src/components/WebGLSlab.tsx` - R3F canvas, fixed background, recursive stela, camera pose application
+- `src/lib/cameraMotion.ts` - pure orbit/dolly camera pose sampling
 - `src/content/homepage.ts` - homepage copy and stage metadata
 - `README.md` - project overview
 - `DESIGN.md` - design language and implementation constraints

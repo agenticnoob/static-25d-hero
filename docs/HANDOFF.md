@@ -12,13 +12,13 @@
   - 仍是 DOM 叙事、指针、滚动状态的主要 owner。
   - 使用统一 rAF 循环写入 narrative presence、title counter-parallax、`coreInteractionRef`、`sceneStateRef`。
   - 使用 Lenis + ScrollTrigger 获取滚动进度和滚动节奏。
-  - 等待 fonts ready + GLB monolith mount ready 后卸载 `scene-preloader`；Canvas 创建本身不会提前放行。
+  - 等待 fonts ready + GLB monolith mount ready 后打开 scene gate；`scene-preloader` 淡出完成后再卸载，Canvas 创建本身不会提前放行。
 
 - `WebGLSlab.tsx`
   - 文件名保留旧称，但当前内容不是薄 slab。
   - 渲染一个透明背景的 R3F Canvas，只包含单一 GLB recursive fossil monolith 主体、一盏主光和 `ContactShadows`。
   - 主体来自 `public/models/black-layered-prism.optimized.glb`。
-  - 通过 `CAMERA_RAIL_DESKTOP` / `CAMERA_RAIL_COMPACT` 做镜头叙事；运行时用 damped `scrollProgress` 沿连续 Catmull-Rom path 采样 camera position / look-at，避免阶段内停住或突然加速。
+  - 通过 `src/lib/cameraMotion.ts` 的 `sampleNarrativeCameraPose()` 做镜头叙事；运行时用 damped `scrollProgress` 采样 orbit、dolly、height、look-at drift 和 roll，避免阶段内停住或突然加速。
   - 通过 `onBeforeCompile` 给导入材质注入 `threshold`、`engraving`、`feedback`、`compression`、`signal` uniform。
   - 使用 procedural stone texture、bump、roughness 和 `ContactShadows` 增强可观测实体感。
   - 没有 Rapier、RigidBody、Collider、room bounds、gravity、collision、restitution 或 random impulse。
@@ -26,6 +26,10 @@
 - `src/lib/interaction.ts`
   - `deriveRecursiveFossilMaterialState` 是滚动阶段到材质意义的纯函数映射。
   - 对应测试在 `tests/interaction.test.mjs`。
+
+- `src/lib/cameraMotion.ts`
+  - `sampleNarrativeCameraPose()` 是滚动进度到 camera position / look-at / roll 的纯函数映射。
+  - 对应测试在 `tests/motion-design.test.mjs`。
 
 - `src/content/homepage.ts`
   - 五段中文叙事保持短句表达，当前语气参考 Son Daven 的暗色、山谷、梦境式氛围，但不复制原站短语。

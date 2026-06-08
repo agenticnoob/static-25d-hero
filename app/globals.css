@@ -52,39 +52,54 @@ html[data-scene-ready="false"] body {
   --ease-quiet: cubic-bezier(0.28, 0.72, 0.18, 1);
 }
 
-/* ── 3D helpers ────────────────────────────────────────── */
-.transform-3d {
-  transform-style: preserve-3d;
+/* ── DOM video cue layer ───────────────────────────────── */
+.video-cue-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.webgl-stage,
-.webgl-stage > div,
-.webgl-stage canvas {
-  width: 100% !important;
-  height: 100% !important;
+.video-cue-anchor {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 100svh;
+  pointer-events: none;
 }
 
-.webgl-stage canvas {
+.video-cue {
+  position: absolute;
+  top: var(--video-cue-y);
+  left: var(--video-cue-x);
+  width: var(--video-cue-width);
+  height: auto;
+  background: transparent;
   display: block;
-}
-
-/* ── Scene reveal handoff ───────────────────────────────── */
-.webgl-shell {
   opacity: 0;
-  filter: blur(10px) brightness(0.72);
-  transform: scale(1.035) translate3d(0, 10px, 0);
-  transform-origin: 50% 50%;
-  transition:
-    opacity 1.25s var(--ease-quiet) 80ms,
-    filter 1.25s var(--ease-quiet) 80ms,
-    transform 1.25s var(--ease-quiet) 80ms;
-  will-change: opacity, filter, transform;
+  object-fit: contain;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
-main[data-ready="true"] .webgl-shell {
+.video-cue.is-active {
   opacity: 1;
-  filter: blur(0) brightness(1);
-  transform: scale(1) translate3d(0, 0, 0);
+}
+
+.video-cue--birds-rise.is-active {
+  animation: bird-cue-rise 5s linear forwards;
+}
+
+@keyframes bird-cue-rise {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(0, -145svh, 0);
+  }
 }
 
 /* ── Scene readiness gate ───────────────────────────────── */
@@ -524,15 +539,8 @@ main[data-intro="revealing"] .narrative-section {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scene-preloader,
-  .webgl-shell {
+  .scene-preloader {
     transition: none;
-  }
-
-  .webgl-shell {
-    opacity: 1;
-    filter: none;
-    transform: none;
   }
 }
 
@@ -548,13 +556,6 @@ main[data-intro="revealing"] .narrative-section {
     opacity: 1 !important;
     transform: translateY(0) !important;
     transition: none !important;
-  }
-
-  .webgl-shell {
-    opacity: 1;
-    filter: none;
-    transform: none;
-    transition: none;
   }
 
   /* Reduce DPR to save battery on mobile */

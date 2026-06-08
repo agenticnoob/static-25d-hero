@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -10,8 +10,8 @@ import { getCinematicScrollStage, getStageIndex } from "@/lib/interaction";
 import { INTRO_REVEAL } from "@/lib/introReveal";
 import { getNarrativePresence } from "@/lib/narrativePresence";
 import { useHeroStore } from "@/lib/heroStore";
-import WebGLSlab from "./WebGLSlab";
 import NarrativeSection from "./NarrativeSection";
+import VideoCueLayer from "./video/VideoCueLayer";
 
 /* ─────────────────────────────────────────────────────────────────
    Entrance animation
@@ -92,7 +92,6 @@ export default function Hero() {
   const heroRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const sectionsRef = useRef<HTMLElement[]>([]);
-  const [sceneReady, setSceneReady] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
   const [introVisible, setIntroVisible] = useState(true);
 
@@ -124,11 +123,7 @@ export default function Hero() {
   const isTouchDevice = useRef(false);
 
   const rafRef = useRef(0);
-  const isReady = sceneReady && fontsReady;
-
-  const handleSceneReady = useCallback(() => {
-    setSceneReady(true);
-  }, []);
+  const isReady = fontsReady;
 
   const setPointerTarget = useHeroStore((state) => state.setPointerTarget);
   const setPointerCurrent = useHeroStore((state) => state.setPointerCurrent);
@@ -603,13 +598,7 @@ export default function Hero() {
         <span>recursive interface</span>
       </div>
 
-      <div className="webgl-shell fixed inset-0 z-[5] h-[100svh] w-full overflow-hidden pointer-events-none">
-        <WebGLSlab
-          coreInteractionRef={coreInteractionRef}
-          sceneStateRef={sceneStateRef}
-          onSceneReady={handleSceneReady}
-        />
-      </div>
+      <VideoCueLayer />
 
       <div className="relative z-20">
         {homepageSections.map((section, index) => (

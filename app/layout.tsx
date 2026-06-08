@@ -12,14 +12,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="color-scheme" content="dark" />
         <meta name="theme-color" content="#142334" />
-        <link
-          rel="preload"
-          href="/models/black-layered-prism.optimized.glb"
-          as="fetch"
-          type="model/gltf-binary"
-          crossOrigin="anonymous"
-          fetchPriority="high"
-        />
         <link rel="icon" href="data:," />
       </head>
       <body className="bg-[#142334] text-[#baccd9] antialiased overscroll-none touch-manipulation">
